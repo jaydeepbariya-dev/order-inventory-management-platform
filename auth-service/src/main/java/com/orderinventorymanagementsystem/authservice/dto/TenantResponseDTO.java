@@ -7,6 +7,12 @@ public class TenantResponseDTO {
     private String name;
     private String status;
 
+    public TenantResponseDTO(UUID id, String name, String status) {
+        this.id = id;
+        this.name = name;
+        this.status = status;
+    }
+
     public UUID getId() {
         return id;
     }
