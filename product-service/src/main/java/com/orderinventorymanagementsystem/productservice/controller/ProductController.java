@@ -2,6 +2,7 @@ package com.orderinventorymanagementsystem.productservice.controller;
 
 import com.orderinventorymanagementsystem.productservice.dto.*;
 import com.orderinventorymanagementsystem.productservice.service.ProductService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,43 +18,56 @@ public class ProductController {
         this.productService = productService;
     }
 
-    // NOTE: sellerId & tenantId will come from JWT later
-
-    @PostMapping
-    public ProductResponseDTO create(
-            @RequestBody ProductRequestDTO dto,
-            @RequestHeader UUID sellerId,
+    @GetMapping
+    public ResponseEntity<List<ProductResponseDTO>> getAllProducts(
             @RequestHeader UUID tenantId) {
-        return productService.createProduct(dto, sellerId, tenantId);
-    }
 
-    @PutMapping("/{id}")
-    public ProductResponseDTO update(
-            @PathVariable UUID id,
-            @RequestBody ProductRequestDTO dto,
-            @RequestHeader UUID sellerId,
-            @RequestHeader UUID tenantId) {
-        return productService.updateProduct(id, dto, sellerId, tenantId);
+        return ResponseEntity.ok(productService.getAllProducts(tenantId));
     }
 
     @GetMapping("/{id}")
-    public ProductResponseDTO get(
+    public ResponseEntity<ProductResponseDTO> getProduct(
             @PathVariable UUID id,
             @RequestHeader UUID tenantId) {
-        return productService.getProduct(id, tenantId);
+
+        return ResponseEntity.ok(productService.getProduct(id, tenantId));
     }
 
-    @GetMapping
-    public List<ProductResponseDTO> getAll(
+    @PostMapping
+    public ResponseEntity<ProductResponseDTO> createProduct(
+            @RequestBody ProductRequestDTO dto,
+            @RequestHeader UUID sellerId,
             @RequestHeader UUID tenantId) {
-        return productService.getAllProducts(tenantId);
+
+        return ResponseEntity.ok(productService.createProduct(dto, sellerId, tenantId));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponseDTO> updateProduct(
+            @PathVariable UUID id,
+            @RequestBody ProductRequestDTO dto,
+            @RequestHeader UUID sellerId,
+            @RequestHeader UUID tenantId) {
+
+        return ResponseEntity.ok(productService.updateProduct(id, dto, sellerId, tenantId));
     }
 
     @DeleteMapping("/{id}")
-    public void delete(
+    public ResponseEntity<Void> deleteProduct(
             @PathVariable UUID id,
             @RequestHeader UUID sellerId,
             @RequestHeader UUID tenantId) {
+
         productService.deleteProduct(id, sellerId, tenantId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<PageResponseDTO<ProductResponseDTO>> searchProducts(
+            @ModelAttribute ProductFilterRequestDTO filter,
+            @RequestHeader UUID tenantId) {
+
+        return ResponseEntity.ok(
+                productService.getProductsByFilter(filter, tenantId));
     }
 }

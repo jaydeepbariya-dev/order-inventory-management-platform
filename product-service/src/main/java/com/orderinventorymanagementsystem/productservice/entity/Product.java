@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.orderinventorymanagementsystem.productservice.enums.StockStatus;
+
 @Entity
 @Table(name = "products")
 public class Product {
@@ -15,10 +17,15 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    @Column(length = 1000)
     private String description;
 
     @Column(nullable = false)
     private Double price;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StockStatus stockStatus;
 
     @Column(nullable = false)
     private UUID sellerId;
@@ -27,10 +34,11 @@ public class Product {
     private UUID tenantId;
 
     private Instant createdAt = Instant.now();
+
     private Instant updatedAt = Instant.now();
 
     @PreUpdate
-    public void preUpdate() {
+    void prePersist() {
         this.updatedAt = Instant.now();
     }
 
@@ -64,6 +72,14 @@ public class Product {
 
     public void setPrice(Double price) {
         this.price = price;
+    }
+
+    public StockStatus getStockStatus() {
+        return stockStatus;
+    }
+
+    public void setStockStatus(StockStatus stockStatus) {
+        this.stockStatus = stockStatus;
     }
 
     public UUID getSellerId() {
