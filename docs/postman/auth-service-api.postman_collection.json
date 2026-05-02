@@ -1,0 +1,343 @@
+{
+  "info": {
+    "_postman_id": "3b124d81-883d-4791-bbf9-bfb0b50c69ce",
+    "name": "auth-service-api",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "33178832"
+  },
+  "item": [
+    {
+      "name": "register-tenant",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    var response = pm.response.json();",
+              "    ",
+              "    if (response.tenantId) {",
+              "        pm.environment.set('tenantId', response.tenantId);",
+              "        console.log('TenantId set: ' + response.tenantId);",
+              "    }",
+              "    ",
+              "    if (response.id) {",
+              "        pm.environment.set('tenantResponseId', response.id);",
+              "    }",
+              "    ",
+              "    if (response.name) {",
+              "        pm.environment.set('tenantName', response.name);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test Tenant\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/tenant",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "tenant"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "register-user",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    var response = pm.response.json();",
+              "    ",
+              "    if (response.userId) {",
+              "        pm.environment.set('userId', response.userId);",
+              "        console.log('UserId set: ' + response.userId);",
+              "    }",
+              "    ",
+              "    if (response.email) {",
+              "        pm.environment.set('userEmail', response.email);",
+              "    }",
+              "    ",
+              "    if (response.role) {",
+              "        pm.environment.set('userRole', response.role);",
+              "    }",
+              "    ",
+              "    if (response.tenantId) {",
+              "        pm.environment.set('tenantId', response.tenantId);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"buyer\",\n  \"email\": \"buyer@example.com\",\n  \"password\": \"password\",\n  \"role\":\"BUYER\",\n  \"tenantId\": \"4b701047-313a-4f83-8ac0-36ee1c7c7540\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var response = pm.response.json();",
+              "    ",
+              "    if (response.accessToken) {",
+              "        pm.environment.set('accessToken', response.accessToken);",
+              "        console.log('AccessToken set');",
+              "    }",
+              "    ",
+              "    if (response.refreshToken) {",
+              "        pm.environment.set('refreshToken', response.refreshToken);",
+              "        console.log('RefreshToken set');",
+              "    }",
+              "    ",
+              "    if (response.userId) {",
+              "        pm.environment.set('userId', response.userId);",
+              "        console.log('UserId set: ' + response.userId);",
+              "    }",
+              "    ",
+              "    if (response.tenantId) {",
+              "        pm.environment.set('tenantId', response.tenantId);",
+              "        console.log('TenantId set: ' + response.tenantId);",
+              "    }",
+              "    ",
+              "    if (response.role) {",
+              "        pm.environment.set('userRole', response.role);",
+              "    }",
+              "    ",
+              "    if (response.email) {",
+              "        pm.environment.set('userEmail', response.email);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"buyer@example.com\",\n  \"password\": \"password\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    console.log('Logout successful');",
+              "    pm.environment.set('accessToken', '');",
+              "    pm.environment.set('refreshToken', '');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/logout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "refresh",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var response = pm.response.json();",
+              "    ",
+              "    if (response.accessToken) {",
+              "        pm.environment.set('accessToken', response.accessToken);",
+              "        console.log('AccessToken refreshed');",
+              "    }",
+              "    ",
+              "    if (response.refreshToken) {",
+              "        pm.environment.set('refreshToken', response.refreshToken);",
+              "        console.log('RefreshToken refreshed');",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"refreshToken\": \"{{refreshToken}}\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/refresh",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "refresh"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "tenantId",
+      "value": ""
+    },
+    {
+      "key": "userRole",
+      "value": ""
+    },
+    {
+      "key": "userEmail",
+      "value": ""
+    },
+    {
+      "key": "tenantName",
+      "value": ""
+    },
+    {
+      "key": "tenantResponseId",
+      "value": ""
+    }
+  ]
+}
