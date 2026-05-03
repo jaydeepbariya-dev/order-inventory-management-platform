@@ -1,10 +1,12 @@
-package com.orderinventorymanagementsystem.authservice.service.impl;
+package com.orderinventorymanagementsystem.authservice.service;
 
 import com.orderinventorymanagementsystem.authservice.dto.*;
 import com.orderinventorymanagementsystem.authservice.entity.*;
 import com.orderinventorymanagementsystem.authservice.enums.TenantStatus;
 import com.orderinventorymanagementsystem.authservice.repository.*;
 import com.orderinventorymanagementsystem.authservice.security.JwtUtil;
+import com.orderinventorymanagementsystem.authservice.service.impl.AuthServiceImpl;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -19,177 +21,177 @@ import static org.mockito.Mockito.*;
 
 class AuthServiceImplTest {
 
-    @InjectMocks
-    private AuthServiceImpl authService;
+        @InjectMocks
+        private AuthServiceImpl authService;
 
-    @Mock
-    private UserRepository userRepository;
+        @Mock
+        private UserRepository userRepository;
 
-    @Mock
-    private TenantRepository tenantRepository;
+        @Mock
+        private TenantRepository tenantRepository;
 
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
+        @Mock
+        private RefreshTokenRepository refreshTokenRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+        @Mock
+        private PasswordEncoder passwordEncoder;
 
-    @Mock
-    private JwtUtil jwtUtil;
+        @Mock
+        private JwtUtil jwtUtil;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
+        @BeforeEach
+        void setUp() {
+                MockitoAnnotations.openMocks(this);
+        }
 
-    // =========================
-    // REGISTER TENANT
-    // =========================
-    @Test
-    void registerTenant_success() {
+        // =========================
+        // REGISTER TENANT
+        // =========================
+        @Test
+        void registerTenant_success() {
 
-        TenantRequestDTO dto = new TenantRequestDTO();
-        dto.setName("TestTenant");
+                TenantRequestDTO dto = new TenantRequestDTO();
+                dto.setName("TestTenant");
 
-        when(tenantRepository.findByName("TestTenant"))
-                .thenReturn(Optional.empty());
+                when(tenantRepository.findByName("TestTenant"))
+                                .thenReturn(Optional.empty());
 
-        Tenant tenant = new Tenant();
-        tenant.setId(UUID.randomUUID());
-        tenant.setName("TestTenant");
-        tenant.setStatus(TenantStatus.ACTIVE);
+                Tenant tenant = new Tenant();
+                tenant.setId(UUID.randomUUID());
+                tenant.setName("TestTenant");
+                tenant.setStatus(TenantStatus.ACTIVE);
 
-        when(tenantRepository.save(any())).thenReturn(tenant);
+                when(tenantRepository.save(any())).thenReturn(tenant);
 
-        TenantResponseDTO response = authService.registerTenant(dto);
+                TenantResponseDTO response = authService.registerTenant(dto);
 
-        assertNotNull(response);
-        assertEquals("TestTenant", response.getName());
-    }
+                assertNotNull(response);
+                assertEquals("TestTenant", response.getName());
+        }
 
-    // =========================
-    // REGISTER USER
-    // =========================
-    @Test
-    void registerUser_success() {
+        // =========================
+        // REGISTER USER
+        // =========================
+        @Test
+        void registerUser_success() {
 
-        UUID tenantId = UUID.randomUUID();
+                UUID tenantId = UUID.randomUUID();
 
-        UserRequestDTO dto = new UserRequestDTO();
-        dto.setName("John");
-        dto.setEmail("john@test.com");
-        dto.setPassword("pass");
-        dto.setTenantId(tenantId);
+                UserRequestDTO dto = new UserRequestDTO();
+                dto.setName("John");
+                dto.setEmail("john@test.com");
+                dto.setPassword("pass");
+                dto.setTenantId(tenantId);
 
-        when(tenantRepository.findById(tenantId))
-                .thenReturn(Optional.of(new Tenant()));
+                when(tenantRepository.findById(tenantId))
+                                .thenReturn(Optional.of(new Tenant()));
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.empty());
+                when(userRepository.findByEmail("john@test.com"))
+                                .thenReturn(Optional.empty());
 
-        when(passwordEncoder.encode("pass")).thenReturn("encoded");
+                when(passwordEncoder.encode("pass")).thenReturn("encoded");
 
-        User user = new User();
-        user.setId(UUID.randomUUID());
-        user.setEmail("john@test.com");
+                User user = new User();
+                user.setId(UUID.randomUUID());
+                user.setEmail("john@test.com");
 
-        when(userRepository.save(any())).thenReturn(user);
+                when(userRepository.save(any())).thenReturn(user);
 
-        when(jwtUtil.generateToken(any())).thenReturn("access-token");
-        when(jwtUtil.generateRefreshToken(any())).thenReturn("refresh-token");
+                when(jwtUtil.generateToken(any())).thenReturn("access-token");
+                when(jwtUtil.generateRefreshToken(any())).thenReturn("refresh-token");
 
-        AuthResponse response = authService.registerUser(dto);
+                AuthResponse response = authService.registerUser(dto);
 
-        assertNotNull(response);
-        assertEquals("access-token", response.getAccessToken());
-        assertEquals("refresh-token", response.getRefreshToken());
-    }
+                assertNotNull(response);
+                assertEquals("access-token", response.getAccessToken());
+                assertEquals("refresh-token", response.getRefreshToken());
+        }
 
-    // =========================
-    // LOGIN USER
-    // =========================
-    @Test
-    void loginUser_success() {
+        // =========================
+        // LOGIN USER
+        // =========================
+        @Test
+        void loginUser_success() {
 
-        AuthRequestDTO dto = new AuthRequestDTO();
-        dto.setEmail("john@test.com");
-        dto.setPassword("pass");
+                AuthRequestDTO dto = new AuthRequestDTO();
+                dto.setEmail("john@test.com");
+                dto.setPassword("pass");
 
-        User user = new User();
-        user.setEmail("john@test.com");
-        user.setPasswordHash("encoded");
+                User user = new User();
+                user.setEmail("john@test.com");
+                user.setPasswordHash("encoded");
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.of(user));
+                when(userRepository.findByEmail("john@test.com"))
+                                .thenReturn(Optional.of(user));
 
-        when(passwordEncoder.matches("pass", "encoded"))
-                .thenReturn(true);
+                when(passwordEncoder.matches("pass", "encoded"))
+                                .thenReturn(true);
 
-        when(jwtUtil.generateToken(user)).thenReturn("access");
-        when(jwtUtil.generateRefreshToken(user)).thenReturn("refresh");
+                when(jwtUtil.generateToken(user)).thenReturn("access");
+                when(jwtUtil.generateRefreshToken(user)).thenReturn("refresh");
 
-        AuthResponse response = authService.loginUser(dto);
+                AuthResponse response = authService.loginUser(dto);
 
-        assertEquals("access", response.getAccessToken());
-        assertEquals("refresh", response.getRefreshToken());
-    }
+                assertEquals("access", response.getAccessToken());
+                assertEquals("refresh", response.getRefreshToken());
+        }
 
-    // =========================
-    // REFRESH TOKEN
-    // =========================
-    @Test
-    void refreshToken_success() {
+        // =========================
+        // REFRESH TOKEN
+        // =========================
+        @Test
+        void refreshToken_success() {
 
-        RefreshTokenRequestDTO dto = new RefreshTokenRequestDTO();
-        dto.setRefreshToken("old-refresh");
+                RefreshTokenRequestDTO dto = new RefreshTokenRequestDTO();
+                dto.setRefreshToken("old-refresh");
 
-        RefreshToken token = new RefreshToken();
-        token.setToken("old-refresh");
-        token.setUserId(UUID.randomUUID());
-        token.setExpiryDate(Instant.now().plusSeconds(1000));
+                RefreshToken token = new RefreshToken();
+                token.setToken("old-refresh");
+                token.setUserId(UUID.randomUUID());
+                token.setExpiryDate(Instant.now().plusSeconds(1000));
 
-        when(refreshTokenRepository.findByToken("old-refresh"))
-                .thenReturn(Optional.of(token));
+                when(refreshTokenRepository.findByToken("old-refresh"))
+                                .thenReturn(Optional.of(token));
 
-        User user = new User();
-        user.setId(token.getUserId());
+                User user = new User();
+                user.setId(token.getUserId());
 
-        when(userRepository.findById(token.getUserId()))
-                .thenReturn(Optional.of(user));
+                when(userRepository.findById(token.getUserId()))
+                                .thenReturn(Optional.of(user));
 
-        when(jwtUtil.generateToken(user)).thenReturn("new-access");
-        when(jwtUtil.generateRefreshToken(user)).thenReturn("new-refresh");
+                when(jwtUtil.generateToken(user)).thenReturn("new-access");
+                when(jwtUtil.generateRefreshToken(user)).thenReturn("new-refresh");
 
-        AuthResponse response = authService.refreshToken(dto);
+                AuthResponse response = authService.refreshToken(dto);
 
-        assertEquals("new-access", response.getAccessToken());
-        assertEquals("new-refresh", response.getRefreshToken());
+                assertEquals("new-access", response.getAccessToken());
+                assertEquals("new-refresh", response.getRefreshToken());
 
-        verify(refreshTokenRepository, times(1)).delete(token);
-    }
+                verify(refreshTokenRepository, times(1)).delete(token);
+        }
 
-    // =========================
-    // LOGOUT
-    // =========================
-    @Test
-    void logout_success() {
+        // =========================
+        // LOGOUT
+        // =========================
+        @Test
+        void logout_success() {
 
-        String token = "Bearer dummy.jwt.token";
+                String token = "Bearer dummy.jwt.token";
 
-        when(jwtUtil.extractUsername(anyString()))
-                .thenReturn("john@test.com");
+                when(jwtUtil.extractUsername(anyString()))
+                                .thenReturn("john@test.com");
 
-        User user = new User();
-        user.setId(UUID.randomUUID());
+                User user = new User();
+                user.setId(UUID.randomUUID());
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.of(user));
+                when(userRepository.findByEmail("john@test.com"))
+                                .thenReturn(Optional.of(user));
 
-        String response = authService.logout(token);
+                String response = authService.logout(token);
 
-        verify(refreshTokenRepository, times(1))
-                .deleteByUserId(user.getId());
+                verify(refreshTokenRepository, times(1))
+                                .deleteByUserId(user.getId());
 
-        assertEquals("Logged out successfully", response);
-    }
+                assertEquals("Logged out successfully", response);
+        }
 }
