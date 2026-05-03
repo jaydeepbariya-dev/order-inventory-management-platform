@@ -14,7 +14,7 @@ public class ProductRequestDTO {
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.1", message = "Price must be greater than 0")
-    private BigDecimal price;
+    private Double price;
 
     @NotNull(message = "Stock status is required")
     private String stockStatus;
@@ -35,11 +35,11 @@ public class ProductRequestDTO {
         this.description = description;
     }
 
-    public BigDecimal getPrice() {
+    public Double getPrice() {
         return price;
     }
 
-    public void setPrice(BigDecimal price) {
+    public void setPrice(Double price) {
         this.price = price;
     }
 

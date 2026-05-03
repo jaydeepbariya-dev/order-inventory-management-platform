@@ -3,19 +3,21 @@ package com.orderinventorymanagementsystem.productservice.dto;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import com.orderinventorymanagementsystem.productservice.enums.StockStatus;
+
 public class ProductResponseDTO {
 
     private UUID id;
     private String name;
     private String description;
-    private BigDecimal price;
+    private Double price;
     private String stockStatus;
 
     public ProductResponseDTO() {
     }
 
     public ProductResponseDTO(UUID id, String name, String description,
-            BigDecimal price, String stockStatus) {
+            Double price, String stockStatus) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -47,11 +49,11 @@ public class ProductResponseDTO {
         this.description = description;
     }
 
-    public BigDecimal getPrice() {
+    public Double getPrice() {
         return price;
     }
 
-    public void setPrice(BigDecimal price) {
+    public void setPrice(Double price) {
         this.price = price;
     }
 
