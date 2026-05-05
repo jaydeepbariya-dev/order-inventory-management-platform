@@ -1,9 +1,0 @@
-target
-.git
-.gitignore
-README.md
-**/node_modules
-**/.idea
-**/.vscode
-**/*.iml
-.DS_Store
