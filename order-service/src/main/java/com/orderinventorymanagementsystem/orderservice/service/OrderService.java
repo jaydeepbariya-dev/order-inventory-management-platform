@@ -1,0 +1,15 @@
+package com.orderinventorymanagementsystem.orderservice.service;
+
+import com.orderinventorymanagementsystem.orderservice.dto.*;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface OrderService {
+
+    OrderResponseDTO placeOrder(OrderRequestDTO dto, UUID userId);
+
+    OrderResponseDTO getOrder(UUID orderId, UUID userId);
+
+    List<OrderResponseDTO> getUserOrders(UUID userId);
+}

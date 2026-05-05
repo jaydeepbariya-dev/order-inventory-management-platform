@@ -47,6 +47,8 @@ public class AuthServiceImpl implements AuthService {
 
         Tenant tenant = new Tenant();
         tenant.setName(dto.getName());
+        tenant.setEmail(dto.getEmail());
+        tenant.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         tenant.setStatus(TenantStatus.ACTIVE);
 
         Tenant saved = tenantRepository.save(tenant);
