@@ -10,11 +10,13 @@ import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.orderinventorymanagementsystem.productservice.dto.PageResponseDTO;
 import com.orderinventorymanagementsystem.productservice.dto.ProductFilterRequestDTO;
 import com.orderinventorymanagementsystem.productservice.dto.ProductRequestDTO;
 import com.orderinventorymanagementsystem.productservice.dto.ProductResponseDTO;
+import com.orderinventorymanagementsystem.productservice.dto.client.InventoryRequestDTO;
 import com.orderinventorymanagementsystem.productservice.entity.Product;
 import com.orderinventorymanagementsystem.productservice.enums.StockStatus;
 import com.orderinventorymanagementsystem.productservice.repository.ProductRepository;
@@ -24,9 +26,11 @@ import com.orderinventorymanagementsystem.productservice.service.ProductService;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
+    private final RestTemplate restTemplate;
 
-    public ProductServiceImpl(ProductRepository productRepository) {
+    public ProductServiceImpl(ProductRepository productRepository, RestTemplate restTemplate) {
         this.productRepository = productRepository;
+        this.restTemplate = restTemplate;
     }
 
     @Override
@@ -50,6 +54,17 @@ public class ProductServiceImpl implements ProductService {
         product.setTenantId(tenantId);
 
         Product saved = productRepository.save(product);
+
+        InventoryRequestDTO request = new InventoryRequestDTO();
+        request.setProductId(saved.getId());
+        request.setQuantity(dto.getQuantity());
+
+        try {
+            String res = restTemplate.postForObject("http://localhost:8083/api/v1/inventory", request, String.class);
+            System.out.println(res);
+        } catch (Exception ex) {
+            System.out.println("Inventory init failed: " + ex.getMessage());
+        }
 
         return map(saved);
     }

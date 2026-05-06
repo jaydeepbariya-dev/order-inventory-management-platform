@@ -18,6 +18,9 @@ public class ProductRequestDTO {
     @NotNull(message = "Stock status is required")
     private String stockStatus;
 
+    @Min(value = 1)
+    private Integer quantity;
+
     public String getName() {
         return name;
     }
@@ -48,6 +51,14 @@ public class ProductRequestDTO {
 
     public void setStockStatus(String stockStatus) {
         this.stockStatus = stockStatus;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 
 }
