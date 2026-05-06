@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5433:5432"
     volumes:
@@ -27,7 +27,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: true
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
@@ -40,8 +40,82 @@ services:
     networks:
       - internal
 
+  # ---------------- PRODUCT DATABASE ----------------
+  product-db:
+    image: postgres:15
+    container_name: product-db
+    environment:
+      POSTGRES_DB: product_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - product_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  # ---------------- PRODUCT SERVICE ----------------
+  product-service:
+    container_name: product-service
+    build: ./product-service
+    image: product-service
+    depends_on:
+      - product-db
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/product_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
+    networks:
+      - internal
+
+  # ---------------- INVENTORY DATABASE ----------------
+  inventory-db:
+    image: postgres:15
+    container_name: inventory-db
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - inventory_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  # ---------------- INVENTORY SERVICE ----------------
+  inventory-service:
+    container_name: inventory-service
+    build: ./inventory-service
+    image: inventory-service
+    depends_on:
+      - inventory-db
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://inventory-db:5432/inventory_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
+    networks:
+      - internal
+
 volumes:
   auth_data:
+  product_data:
+  inventory_data:
 
 networks:
   internal:

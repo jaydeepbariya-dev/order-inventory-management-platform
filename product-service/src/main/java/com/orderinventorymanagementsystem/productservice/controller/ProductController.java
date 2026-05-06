@@ -42,7 +42,7 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ProductResponseDTO> createProduct(
             @RequestBody @Valid ProductRequestDTO dto,
-            @RequestHeader UUID sellerId,
+            @RequestHeader UUID sellerId,   
             @RequestHeader UUID tenantId,
             @RequestHeader String role) {
 

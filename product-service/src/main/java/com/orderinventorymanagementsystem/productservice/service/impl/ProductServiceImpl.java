@@ -61,7 +61,9 @@ public class ProductServiceImpl implements ProductService {
         request.setQuantity(dto.getQuantity());
 
         try {
-            String res = restTemplate.postForObject("http://localhost:8083/api/v1/inventory", request, String.class);
+            String res = restTemplate.postForObject("http://inventory-service:8084/api/v1/inventory", request,
+                    String.class);
+            System.out.println(res);
         } catch (RestClientException ex) {
             throw new InventoryServiceException("Failed to initialize inventory for product: " + ex.getMessage());
         }
