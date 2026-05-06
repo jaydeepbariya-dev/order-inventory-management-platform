@@ -2,6 +2,8 @@ package com.orderinventorymanagementsystem.orderservice.service.impl;
 
 import com.orderinventorymanagementsystem.orderservice.dto.*;
 import com.orderinventorymanagementsystem.orderservice.dto.client.InventoryRequestDTO;
+import com.orderinventorymanagementsystem.orderservice.dto.client.PaymentRequestDTO;
+import com.orderinventorymanagementsystem.orderservice.dto.client.PaymentResponseDTO;
 import com.orderinventorymanagementsystem.orderservice.entity.Order;
 import com.orderinventorymanagementsystem.orderservice.entity.OrderItem;
 import com.orderinventorymanagementsystem.orderservice.enums.OrderStatus;
@@ -11,6 +13,7 @@ import com.orderinventorymanagementsystem.orderservice.service.OrderService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,41 +38,95 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("Order items cannot be empty");
         }
 
-        double totalAmount = 0;
-
-        for (OrderItemRequestDTO item : dto.getItems()) {
-
-            String url = "http://inventory-service:8083/api/v1/inventory/reserve";
-
-            InventoryRequestDTO request = new InventoryRequestDTO();
-            request.setProductId(item.getProductId());
-            request.setQuantity(item.getQuantity());
-
-            try {
-                String res = restTemplate.postForObject(url, request, String.class);
-                System.out.println(res);
-            } catch (Exception ex) {
-                Order failedOrder = new Order();
-                failedOrder.setUserId(userId);
-                failedOrder.setStatus(OrderStatus.FAILED);
-                failedOrder.setTotalAmount(0.0);
-
-                orderRepository.save(failedOrder);
-
-                throw new RuntimeException("Stock reservation failed for product: " + item.getProductId());
-            }
-
-            totalAmount += item.getPrice() * item.getQuantity();
-        }
-
+        // 1. Create Order (CREATED)
         Order order = new Order();
         order.setUserId(userId);
-        order.setTotalAmount(totalAmount);
-        order.setStatus(OrderStatus.RESERVED);
+        order.setStatus(OrderStatus.CREATED);
         order.setPaymentStatus(PaymentStatus.PENDING);
 
         Order savedOrder = orderRepository.save(order);
 
+        double totalAmount = 0;
+
+        List<InventoryRequestDTO> reservedItems = new ArrayList<>();
+
+        try {
+            // 2. Reserve Inventory
+            for (OrderItemRequestDTO item : dto.getItems()) {
+
+                InventoryRequestDTO invReq = new InventoryRequestDTO();
+                invReq.setProductId(item.getProductId());
+                invReq.setQuantity(item.getQuantity());
+
+                restTemplate.postForObject(
+                        "http://inventory-service:8083/api/v1/inventory/reserve",
+                        invReq,
+                        Void.class);
+
+                reservedItems.add(invReq);
+
+                totalAmount += item.getPrice() * item.getQuantity();
+            }
+
+            // 3. Call Payment Service
+            PaymentRequestDTO paymentRequest = new PaymentRequestDTO();
+            paymentRequest.setOrderId(savedOrder.getId());
+            paymentRequest.setAmount(totalAmount);
+
+            PaymentResponseDTO paymentResponse = restTemplate.postForObject(
+                    "http://payment-service:8084/api/v1/payments",
+                    paymentRequest,
+                    PaymentResponseDTO.class);
+
+            // 4. Handle Payment Result
+            if (paymentResponse.getStatus().name().equals("SUCCESS")) {
+
+                // Deduct stock
+                for (InventoryRequestDTO item : reservedItems) {
+                    restTemplate.postForObject(
+                            "http://inventory-service:8083/api/v1/inventory/deduct",
+                            item,
+                            Void.class);
+                }
+
+                savedOrder.setStatus(OrderStatus.CONFIRMED);
+                savedOrder.setPaymentStatus(PaymentStatus.SUCCESS);
+
+            } else {
+
+                // Release stock
+                for (InventoryRequestDTO item : reservedItems) {
+                    restTemplate.postForObject(
+                            "http://inventory-service:8083/api/v1/inventory/release",
+                            item,
+                            Void.class);
+                }
+
+                savedOrder.setStatus(OrderStatus.FAILED);
+                savedOrder.setPaymentStatus(PaymentStatus.FAILED);
+            }
+
+        } catch (Exception ex) {
+
+            // If anything fails → release stock
+            for (InventoryRequestDTO item : reservedItems) {
+                try {
+                    restTemplate.postForObject(
+                            "http://inventory-service:8083/api/v1/inventory/release",
+                            item,
+                            Void.class);
+                } catch (Exception ignore) {
+                }
+            }
+
+            savedOrder.setStatus(OrderStatus.FAILED);
+            savedOrder.setPaymentStatus(PaymentStatus.FAILED);
+        }
+
+        savedOrder.setTotalAmount(totalAmount);
+        orderRepository.save(savedOrder);
+
+        // 5. Save Order Items
         for (OrderItemRequestDTO item : dto.getItems()) {
 
             OrderItem orderItem = new OrderItem();
