@@ -10,8 +10,10 @@ import jakarta.persistence.criteria.Predicate;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
 
 import com.orderinventorymanagementsystem.productservice.dto.PageResponseDTO;
+import com.orderinventorymanagementsystem.productservice.exception.*;
 import com.orderinventorymanagementsystem.productservice.dto.ProductFilterRequestDTO;
 import com.orderinventorymanagementsystem.productservice.dto.ProductRequestDTO;
 import com.orderinventorymanagementsystem.productservice.dto.ProductResponseDTO;
@@ -36,12 +38,12 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDTO createProduct(ProductRequestDTO dto, UUID sellerId, UUID tenantId, String role) {
 
         if (!"SELLER".equals(role)) {
-            throw new RuntimeException("Only SELLER can create product");
+            throw new UnauthorizedException("Access denied: Only SELLER role can create products");
         }
 
         productRepository.findByName(dto.getName())
                 .ifPresent(p -> {
-                    throw new RuntimeException("Same name product already exists");
+                    throw new ProductAlreadyExistsException("Product with name '" + dto.getName() + "' already exists");
                 });
 
         Product product = new Product();
@@ -60,9 +62,8 @@ public class ProductServiceImpl implements ProductService {
 
         try {
             String res = restTemplate.postForObject("http://localhost:8083/api/v1/inventory", request, String.class);
-            System.out.println(res);
-        } catch (Exception ex) {
-            System.out.println("Inventory init failed: " + ex.getMessage());
+        } catch (RestClientException ex) {
+            throw new InventoryServiceException("Failed to initialize inventory for product: " + ex.getMessage());
         }
 
         return map(saved);
@@ -72,7 +73,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDTO getProductById(UUID productId, UUID tenantId) {
 
         Product product = productRepository.findByIdAndTenantId(productId, tenantId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ProductNotFoundException("Product with ID '" + productId + "' not found"));
 
         return map(product);
     }
@@ -91,14 +92,14 @@ public class ProductServiceImpl implements ProductService {
             UUID sellerId, UUID tenantId, String role) {
 
         if (!"SELLER".equals(role)) {
-            throw new RuntimeException("Only SELLER can update product");
+            throw new UnauthorizedException("Access denied: Only SELLER role can update products");
         }
 
         Product product = productRepository.findByIdAndTenantId(productId, tenantId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ProductNotFoundException("Product with ID '" + productId + "' not found"));
 
         if (!product.getSellerId().equals(sellerId)) {
-            throw new RuntimeException("Unauthorized: not owner");
+            throw new UnauthorizedException("Access denied: You are not the owner of this product");
         }
 
         product.setName(dto.getName().trim());
@@ -114,14 +115,14 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(UUID productId, UUID sellerId, UUID tenantId, String role) {
 
         if (!"SELLER".equals(role)) {
-            throw new RuntimeException("Only SELLER can delete product");
+            throw new UnauthorizedException("Access denied: Only SELLER role can delete products");
         }
 
         Product product = productRepository.findByIdAndTenantId(productId, tenantId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ProductNotFoundException("Product with ID '" + productId + "' not found"));
 
         if (!product.getSellerId().equals(sellerId)) {
-            throw new RuntimeException("Unauthorized");
+            throw new UnauthorizedException("Access denied: You are not the owner of this product");
         }
 
         productRepository.delete(product);

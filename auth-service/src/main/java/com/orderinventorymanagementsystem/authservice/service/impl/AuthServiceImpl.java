@@ -3,6 +3,7 @@ package com.orderinventorymanagementsystem.authservice.service.impl;
 import com.orderinventorymanagementsystem.authservice.dto.*;
 import com.orderinventorymanagementsystem.authservice.entity.*;
 import com.orderinventorymanagementsystem.authservice.enums.TenantStatus;
+import com.orderinventorymanagementsystem.authservice.exception.*;
 import com.orderinventorymanagementsystem.authservice.mapper.TenantMapper;
 import com.orderinventorymanagementsystem.authservice.repository.*;
 import com.orderinventorymanagementsystem.authservice.security.JwtUtil;
@@ -42,7 +43,7 @@ public class AuthServiceImpl implements AuthService {
 
         tenantRepository.findByName(dto.getName())
                 .ifPresent(t -> {
-                    throw new RuntimeException("Tenant already exists");
+                    throw new TenantAlreadyExistsException("Tenant with name '" + dto.getName() + "' already exists");
                 });
 
         Tenant tenant = new Tenant();
@@ -60,11 +61,11 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse registerUser(UserRequestDTO dto) {
 
         tenantRepository.findById(dto.getTenantId())
-                .orElseThrow(() -> new RuntimeException("Tenant not found"));
+                .orElseThrow(() -> new TenantNotFoundException("Tenant with ID '" + dto.getTenantId() + "' not found"));
 
         userRepository.findByEmail(dto.getEmail())
                 .ifPresent(u -> {
-                    throw new RuntimeException("User already exists");
+                    throw new UserAlreadyExistsException("User with email '" + dto.getEmail() + "' already exists");
                 });
 
         User user = new User();
@@ -89,10 +90,10 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse loginUser(AuthRequestDTO dto) {
 
         User user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
         if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new InvalidCredentialsException("Invalid email or password");
         }
 
         String accessToken = jwtUtil.generateToken(user);
@@ -107,15 +108,15 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(RefreshTokenRequestDTO refreshTokenRequestDTO) {
 
         RefreshToken token = refreshTokenRepository.findByToken(refreshTokenRequestDTO.getRefreshToken())
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+                .orElseThrow(() -> new RefreshTokenNotFoundException("Refresh token is invalid or not found"));
 
         if (token.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.delete(token);
-            throw new RuntimeException("Refresh token expired");
+            throw new RefreshTokenNotFoundException("Refresh token has expired");
         }
 
         User user = userRepository.findById(token.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User associated with refresh token not found"));
 
         refreshTokenRepository.delete(token);
 
@@ -138,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
         String email = jwtUtil.extractUsername(token);
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User with email '" + email + "' not found"));
 
         refreshTokenRepository.deleteByUserId(user.getId());
 

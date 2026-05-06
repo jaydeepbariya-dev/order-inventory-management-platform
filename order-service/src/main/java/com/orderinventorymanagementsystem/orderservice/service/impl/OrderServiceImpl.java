@@ -8,6 +8,7 @@ import com.orderinventorymanagementsystem.orderservice.entity.Order;
 import com.orderinventorymanagementsystem.orderservice.entity.OrderItem;
 import com.orderinventorymanagementsystem.orderservice.enums.OrderStatus;
 import com.orderinventorymanagementsystem.orderservice.enums.PaymentStatus;
+import com.orderinventorymanagementsystem.orderservice.exception.*;
 import com.orderinventorymanagementsystem.orderservice.repository.*;
 import com.orderinventorymanagementsystem.orderservice.service.OrderService;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponseDTO placeOrder(OrderRequestDTO dto, UUID userId) {
 
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new RuntimeException("Order items cannot be empty");
+            throw new InvalidOrderRequestException("Order must contain at least one item");
         }
 
         // 1. Create Order (CREATED)
@@ -59,7 +60,7 @@ public class OrderServiceImpl implements OrderService {
                 invReq.setQuantity(item.getQuantity());
 
                 restTemplate.postForObject(
-                        "http://inventory-service:8083/api/v1/inventory/reserve",
+                        "http://localhost:8084/api/v1/inventory/reserve",
                         invReq,
                         Void.class);
 
@@ -67,6 +68,9 @@ public class OrderServiceImpl implements OrderService {
 
                 totalAmount += item.getPrice() * item.getQuantity();
             }
+
+            savedOrder.setStatus(OrderStatus.RESERVED);
+            orderRepository.save(savedOrder);
 
             // 3. Call Payment Service
             PaymentRequestDTO paymentRequest = new PaymentRequestDTO();
@@ -79,12 +83,17 @@ public class OrderServiceImpl implements OrderService {
                     PaymentResponseDTO.class);
 
             // 4. Handle Payment Result
-            if (paymentResponse.getStatus().name().equals("SUCCESS")) {
+
+            if (paymentResponse == null || paymentResponse.getStatus() == null) {
+                throw new RuntimeException("Payment failed");
+            }
+
+            if (paymentResponse.getStatus() == PaymentStatus.SUCCESS) {
 
                 // Deduct stock
                 for (InventoryRequestDTO item : reservedItems) {
                     restTemplate.postForObject(
-                            "http://inventory-service:8083/api/v1/inventory/deduct",
+                            "http://inventory-service:8084/api/v1/inventory/deduct",
                             item,
                             Void.class);
                 }
@@ -151,10 +160,10 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponseDTO getOrder(UUID orderId, UUID userId) {
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new OrderNotFoundException("Order with ID '" + orderId + "' not found"));
 
         if (!order.getUserId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access");
+            throw new UnauthorizedAccessException("You do not have permission to access this order");
         }
 
         return new OrderResponseDTO(

@@ -3,6 +3,7 @@ package com.orderinventorymanagementsystem.notificationservice.service.impl;
 import com.orderinventorymanagementsystem.notificationservice.dto.*;
 import com.orderinventorymanagementsystem.notificationservice.entity.Notification;
 import com.orderinventorymanagementsystem.notificationservice.enums.NotificationStatus;
+import com.orderinventorymanagementsystem.notificationservice.exception.*;
 import com.orderinventorymanagementsystem.notificationservice.repository.NotificationRepository;
 import com.orderinventorymanagementsystem.notificationservice.service.NotificationService;
 import org.springframework.stereotype.Service;
@@ -21,15 +22,15 @@ public class NotificationServiceImpl implements NotificationService {
 
         // 1. Basic validation
         if (request.getUserId() == null) {
-            throw new RuntimeException("UserId is required");
+            throw new InvalidNotificationRequestException("User ID is required for sending notification");
         }
 
         if (request.getType() == null) {
-            throw new RuntimeException("Notification type is required");
+            throw new InvalidNotificationRequestException("Notification type is required");
         }
 
         if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
-            throw new RuntimeException("Message cannot be empty");
+            throw new InvalidNotificationRequestException("Notification message cannot be empty");
         }
 
         // 2. Create entity

@@ -2,6 +2,7 @@ package com.orderinventorymanagementsystem.inventoryservice.service.impl;
 
 import com.orderinventorymanagementsystem.inventoryservice.dto.*;
 import com.orderinventorymanagementsystem.inventoryservice.entity.Inventory;
+import com.orderinventorymanagementsystem.inventoryservice.exception.*;
 import com.orderinventorymanagementsystem.inventoryservice.repository.InventoryRepository;
 import com.orderinventorymanagementsystem.inventoryservice.service.InventoryService;
 
@@ -22,7 +23,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     public InventoryResponseDTO checkStock(InventoryRequestDTO request) {
         Inventory inventory = inventoryRepository.findByProductId(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Inventory not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory for product ID '" + request.getProductId() + "' not found"));
 
         return new InventoryResponseDTO(
                 inventory.getProductId(),
@@ -35,10 +36,10 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryResponseDTO reserveStock(InventoryRequestDTO request) {
         try {
             Inventory inventory = inventoryRepository.findByProductId(request.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Inventory not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Inventory for product ID '" + request.getProductId() + "' not found"));
 
             if (inventory.getAvailableQty() < request.getQuantity()) {
-                throw new RuntimeException("Insufficient stock");
+                throw new InsufficientStockException("Insufficient available stock for product ID '" + request.getProductId() + "'. Required: " + request.getQuantity() + ", Available: " + inventory.getAvailableQty());
             }
 
             // move stock
@@ -63,10 +64,10 @@ public class InventoryServiceImpl implements InventoryService {
 
         try {
             Inventory inventory = inventoryRepository.findByProductId(request.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Inventory not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Inventory for product ID '" + request.getProductId() + "' not found"));
 
             if (inventory.getReservedQty() < request.getQuantity()) {
-                throw new RuntimeException("Invalid release quantity");
+                throw new InsufficientReservedStockException("Cannot release stock: Reserved quantity is insufficient for product ID '" + request.getProductId() + "'. Reserved: " + inventory.getReservedQty() + ", Requested: " + request.getQuantity());
             }
 
             inventory.setReservedQty(inventory.getReservedQty() - request.getQuantity());
@@ -80,19 +81,20 @@ public class InventoryServiceImpl implements InventoryService {
                     saved.getReservedQty());
 
         } catch (ObjectOptimisticLockingFailureException ex) {
-            throw new RuntimeException("Concurrent update detected, retry");
+            throw new ConcurrentUpdateException("Concurrent update detected while releasing stock. Please retry the operation");
         }
     }
 
+    @Override
     @Transactional
     public InventoryResponseDTO deductStock(InventoryRequestDTO request) {
 
         try {
             Inventory inventory = inventoryRepository.findByProductId(request.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Inventory not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Inventory for product ID '" + request.getProductId() + "' not found"));
 
             if (inventory.getReservedQty() < request.getQuantity()) {
-                throw new RuntimeException("Not enough reserved stock");
+                throw new InsufficientReservedStockException("Cannot deduct stock: Insufficient reserved stock for product ID '" + request.getProductId() + "'. Reserved: " + inventory.getReservedQty() + ", Requested: " + request.getQuantity());
             }
 
             inventory.setReservedQty(inventory.getReservedQty() - request.getQuantity());
@@ -105,7 +107,7 @@ public class InventoryServiceImpl implements InventoryService {
                     saved.getReservedQty());
 
         } catch (ObjectOptimisticLockingFailureException ex) {
-            throw new RuntimeException("Concurrent update detected, retry");
+            throw new ConcurrentUpdateException("Concurrent update detected while deducting stock. Please retry the operation");
         }
     }
 
@@ -114,7 +116,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         inventoryRepository.findByProductId(request.getProductId())
                 .ifPresent(i -> {
-                    throw new RuntimeException("Inventory already exists");
+                    throw new ResourceNotFoundException("Inventory already exists for product ID '" + request.getProductId() + "'");
                 });
 
         Inventory inventory = new Inventory();

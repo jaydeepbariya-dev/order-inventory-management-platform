@@ -1,4 +1,4 @@
-package com.orderinventorymanagementsystem.notificationservice.exception;
+package com.orderinventorymanagementsystem.productservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,18 +15,32 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(NotificationException.class)
-    public ResponseEntity<ErrorInfo> handleNotificationException(
-            NotificationException ex,
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorInfo> handleUnauthorized(
+            UnauthorizedException ex,
             HttpServletRequest request) {
-        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, request);
+        return buildResponse(ex.getMessage(), HttpStatus.FORBIDDEN, request);
     }
 
-    @ExceptionHandler(InvalidNotificationRequestException.class)
-    public ResponseEntity<ErrorInfo> handleInvalidNotificationRequest(
-            InvalidNotificationRequestException ex,
+    @ExceptionHandler(ProductAlreadyExistsException.class)
+    public ResponseEntity<ErrorInfo> handleProductAlreadyExists(
+            ProductAlreadyExistsException ex,
             HttpServletRequest request) {
-        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, request);
+        return buildResponse(ex.getMessage(), HttpStatus.CONFLICT, request);
+    }
+
+    @ExceptionHandler(ProductNotFoundException.class)
+    public ResponseEntity<ErrorInfo> handleProductNotFound(
+            ProductNotFoundException ex,
+            HttpServletRequest request) {
+        return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND, request);
+    }
+
+    @ExceptionHandler(InventoryServiceException.class)
+    public ResponseEntity<ErrorInfo> handleInventoryServiceError(
+            InventoryServiceException ex,
+            HttpServletRequest request) {
+        return buildResponse(ex.getMessage(), HttpStatus.SERVICE_UNAVAILABLE, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -63,7 +77,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorInfo> handleGeneric(
+    public ResponseEntity<ErrorInfo> handleGenericException(
             Exception ex,
             HttpServletRequest request) {
         return buildResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR, request);

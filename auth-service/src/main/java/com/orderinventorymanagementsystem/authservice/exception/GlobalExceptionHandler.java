@@ -1,4 +1,4 @@
-package com.orderinventorymanagementsystem.notificationservice.exception;
+package com.orderinventorymanagementsystem.authservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,18 +15,46 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(NotificationException.class)
-    public ResponseEntity<ErrorInfo> handleNotificationException(
-            NotificationException ex,
+    @ExceptionHandler(TenantAlreadyExistsException.class)
+    public ResponseEntity<ErrorInfo> handleTenantAlreadyExists(
+            TenantAlreadyExistsException ex,
             HttpServletRequest request) {
-        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, request);
+        return buildResponse(ex.getMessage(), HttpStatus.CONFLICT, request);
     }
 
-    @ExceptionHandler(InvalidNotificationRequestException.class)
-    public ResponseEntity<ErrorInfo> handleInvalidNotificationRequest(
-            InvalidNotificationRequestException ex,
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<ErrorInfo> handleUserAlreadyExists(
+            UserAlreadyExistsException ex,
             HttpServletRequest request) {
-        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST, request);
+        return buildResponse(ex.getMessage(), HttpStatus.CONFLICT, request);
+    }
+
+    @ExceptionHandler(TenantNotFoundException.class)
+    public ResponseEntity<ErrorInfo> handleTenantNotFound(
+            TenantNotFoundException ex,
+            HttpServletRequest request) {
+        return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND, request);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorInfo> handleUserNotFound(
+            UserNotFoundException ex,
+            HttpServletRequest request) {
+        return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND, request);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorInfo> handleInvalidCredentials(
+            InvalidCredentialsException ex,
+            HttpServletRequest request) {
+        return buildResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED, request);
+    }
+
+    @ExceptionHandler(RefreshTokenNotFoundException.class)
+    public ResponseEntity<ErrorInfo> handleRefreshTokenNotFound(
+            RefreshTokenNotFoundException ex,
+            HttpServletRequest request) {
+        return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -63,7 +91,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorInfo> handleGeneric(
+    public ResponseEntity<ErrorInfo> handleGenericException(
             Exception ex,
             HttpServletRequest request) {
         return buildResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR, request);
