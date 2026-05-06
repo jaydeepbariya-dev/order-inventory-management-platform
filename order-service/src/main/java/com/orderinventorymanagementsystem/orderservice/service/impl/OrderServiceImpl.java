@@ -2,10 +2,13 @@ package com.orderinventorymanagementsystem.orderservice.service.impl;
 
 import com.orderinventorymanagementsystem.orderservice.dto.*;
 import com.orderinventorymanagementsystem.orderservice.dto.client.InventoryRequestDTO;
+import com.orderinventorymanagementsystem.orderservice.dto.client.NotificationRequestDTO;
+import com.orderinventorymanagementsystem.orderservice.dto.client.NotificationResponseDTO;
 import com.orderinventorymanagementsystem.orderservice.dto.client.PaymentRequestDTO;
 import com.orderinventorymanagementsystem.orderservice.dto.client.PaymentResponseDTO;
 import com.orderinventorymanagementsystem.orderservice.entity.Order;
 import com.orderinventorymanagementsystem.orderservice.entity.OrderItem;
+import com.orderinventorymanagementsystem.orderservice.enums.NotificationType;
 import com.orderinventorymanagementsystem.orderservice.enums.OrderStatus;
 import com.orderinventorymanagementsystem.orderservice.enums.PaymentStatus;
 import com.orderinventorymanagementsystem.orderservice.exception.*;
@@ -83,12 +86,11 @@ public class OrderServiceImpl implements OrderService {
             paymentRequest.setAmount(totalAmount);
 
             PaymentResponseDTO paymentResponse = restTemplate.postForObject(
-                    "http://payment-service:8084/api/v1/payments",
+                    "http://payment-service:8085/api/v1/payments",
                     paymentRequest,
                     PaymentResponseDTO.class);
 
             // 4. Handle Payment Result
-
             if (paymentResponse == null || paymentResponse.getStatus() == null) {
                 throw new RuntimeException("Payment failed");
             }
@@ -111,7 +113,7 @@ public class OrderServiceImpl implements OrderService {
                 // Release stock
                 for (InventoryRequestDTO item : reservedItems) {
                     restTemplate.postForObject(
-                            "http://inventory-service:8083/api/v1/inventory/release",
+                            "http://inventory-service:8084/api/v1/inventory/release",
                             item,
                             Void.class);
                 }
@@ -126,10 +128,11 @@ public class OrderServiceImpl implements OrderService {
             for (InventoryRequestDTO item : reservedItems) {
                 try {
                     restTemplate.postForObject(
-                            "http://inventory-service:8083/api/v1/inventory/release",
+                            "http://inventory-service:8084/api/v1/inventory/release",
                             item,
                             Void.class);
                 } catch (Exception ignore) {
+                    System.out.println("exception occured");
                 }
             }
 
@@ -139,6 +142,22 @@ public class OrderServiceImpl implements OrderService {
 
         savedOrder.setTotalAmount(totalAmount);
         orderRepository.save(savedOrder);
+
+        NotificationRequestDTO notificationRequestDTO = new NotificationRequestDTO();
+        notificationRequestDTO.setMessage("Order Placed");
+        notificationRequestDTO.setType(NotificationType.EMAIL);
+        notificationRequestDTO.setUserId(userId);
+
+        try {
+            NotificationResponseDTO res = restTemplate.postForObject(
+                    "http://notification-service:8086/api/v1/notifications",
+                    notificationRequestDTO,
+                    NotificationResponseDTO.class);
+
+            System.out.println(res);
+        } catch (Exception e) {
+            System.out.println("exception occured");
+        }
 
         // 5. Save Order Items
         for (OrderItemRequestDTO item : dto.getItems()) {
