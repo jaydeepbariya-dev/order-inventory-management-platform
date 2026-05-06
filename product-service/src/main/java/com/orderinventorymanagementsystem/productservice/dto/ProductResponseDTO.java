@@ -1,9 +1,7 @@
 package com.orderinventorymanagementsystem.productservice.dto;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
-import com.orderinventorymanagementsystem.productservice.enums.StockStatus;
 
 public class ProductResponseDTO {
 
