@@ -38,10 +38,10 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderResponseDTO>> getUserOrders(
+    public ResponseEntity<List<OrderResponseDTO>> getOrdersByUserId(
             @RequestHeader UUID userId) {
 
-        List<OrderResponseDTO> res = orderService.getUserOrders(userId);
+        List<OrderResponseDTO> res = orderService.getOrdersByUserId(userId);
         return new ResponseEntity<>(res, HttpStatus.OK);
     }
 }

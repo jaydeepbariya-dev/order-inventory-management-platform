@@ -11,6 +11,7 @@ public class OrderMapper {
     public static OrderResponseDTO toDTO(Order order, List<OrderItem> items) {
 
         OrderResponseDTO dto = new OrderResponseDTO();
+        
         dto.setId(order.getId());
         dto.setUserId(order.getUserId());
         dto.setTotalAmount(order.getTotalAmount());

@@ -14,6 +14,20 @@ public class OrderResponseDTO {
     private Instant createdAt;
     private List<OrderItemResponseDTO> items;
 
+    public OrderResponseDTO(UUID id, UUID userId, Double totalAmount, String status, String paymentStatus,
+            Instant createdAt) {
+        this.id = id;
+        this.userId = userId;
+        this.totalAmount = totalAmount;
+        this.status = status;
+        this.paymentStatus = paymentStatus;
+        this.createdAt = createdAt;
+    }
+
+    public OrderResponseDTO() {
+        super();
+    }
+
     public UUID getId() {
         return id;
     }
