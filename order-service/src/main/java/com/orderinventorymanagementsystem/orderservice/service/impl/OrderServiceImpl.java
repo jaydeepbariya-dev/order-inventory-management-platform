@@ -11,7 +11,11 @@ import com.orderinventorymanagementsystem.orderservice.enums.PaymentStatus;
 import com.orderinventorymanagementsystem.orderservice.exception.*;
 import com.orderinventorymanagementsystem.orderservice.repository.*;
 import com.orderinventorymanagementsystem.orderservice.service.OrderService;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -33,6 +37,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public OrderResponseDTO placeOrder(OrderRequestDTO dto, UUID userId) {
 
         if (dto.getItems() == null || dto.getItems().isEmpty()) {

@@ -1,0 +1,48 @@
+services:
+
+  # ---------------- AUTH DATABASE ----------------
+  auth-db:
+    image: postgres:15
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  # ---------------- AUTH SERVICE ----------------
+  auth-service:
+    container_name: auth-service
+    build: ./auth-service
+    image: auth-service
+    depends_on:
+      - auth-db
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      JWT_SECRET: bXkgbmFtZSBpcyBqYXlkZWVwIGJhcml5YSBhbmQgaSB3aWxsIGJlIHN1Y2Nlc3NmdWwgaW4gdGhpcyB5ZWFy
+      JWT_ACCESS_TOKEN_EXPIRATION: 900000
+      JWT_REFRESH_TOKEN_EXPIRATION: 604800000
+
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
+    networks:
+      - internal
+
+volumes:
+  auth_data:
+
+networks:
+  internal:
+    driver: bridge
