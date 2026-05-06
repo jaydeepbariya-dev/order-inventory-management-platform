@@ -15,4 +15,6 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     Optional<Product> findByIdAndTenantId(UUID productId, UUID tenantId);
 
     List<Product> findByTenantIdAndNameContainingIgnoreCase(UUID tenantId, String trim);
+
+    Optional<Product> findByName(String name);
 }

@@ -1,7 +1,6 @@
 package com.orderinventorymanagementsystem.productservice.dto;
 
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
 
 public class ProductRequestDTO {
 

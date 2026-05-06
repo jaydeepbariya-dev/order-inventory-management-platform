@@ -3,14 +3,12 @@ package com.orderinventorymanagementsystem.productservice.service.impl;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
 
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.orderinventorymanagementsystem.productservice.dto.PageResponseDTO;
@@ -38,7 +36,10 @@ public class ProductServiceImpl implements ProductService {
             throw new RuntimeException("Only SELLER can create product");
         }
 
-        // check if product already exists with same name
+        productRepository.findByName(dto.getName())
+                .ifPresent(p -> {
+                    throw new RuntimeException("Same name product already exists");
+                });
 
         Product product = new Product();
         product.setName(dto.getName().trim());
@@ -157,28 +158,24 @@ public class ProductServiceImpl implements ProductService {
 
             predicates.add(cb.equal(root.get("tenantId"), tenantId));
 
-            // name (LIKE)
             if (filter.getName() != null && !filter.getName().isBlank()) {
                 predicates.add(cb.like(
                         cb.lower(root.get("name")),
                         "%" + filter.getName().toLowerCase() + "%"));
             }
 
-            // minPrice
             if (filter.getMinPrice() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(
                         root.get("price"),
                         filter.getMinPrice()));
             }
 
-            // maxPrice
             if (filter.getMaxPrice() != null) {
                 predicates.add(cb.lessThanOrEqualTo(
                         root.get("price"),
                         filter.getMaxPrice()));
             }
 
-            // stockStatus
             if (filter.getStockStatus() != null) {
                 predicates.add(cb.equal(
                         root.get("stockStatus"),
@@ -188,16 +185,13 @@ public class ProductServiceImpl implements ProductService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        // 3. Execute query
         Page<Product> pageResult = productRepository.findAll(spec, pageable);
 
-        // 4. Map to DTO
         List<ProductResponseDTO> content = pageResult.getContent()
                 .stream()
                 .map(this::map)
                 .toList();
 
-        // 5. Wrap response
         return new PageResponseDTO<>(
                 content,
                 pageResult.getNumber(),

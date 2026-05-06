@@ -39,7 +39,6 @@ public class ProductController {
         return new ResponseEntity<>(res, HttpStatus.OK);
     }
 
-    // CREATE PRODUCT
     @PostMapping
     public ResponseEntity<ProductResponseDTO> createProduct(
             @RequestBody @Valid ProductRequestDTO dto,
