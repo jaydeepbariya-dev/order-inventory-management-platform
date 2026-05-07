@@ -1,6 +1,5 @@
 package com.orderinventorymanagementsystem.orderservice.dto.client;
 
-
 import java.util.UUID;
 
 import com.orderinventorymanagementsystem.orderservice.enums.PaymentStatus;
@@ -17,6 +16,10 @@ public class PaymentResponseDTO {
         this.orderId = orderId;
         this.amount = amount;
         this.status = status;
+    }
+
+    public PaymentResponseDTO() {
+        super();
     }
 
     public UUID getPaymentId() {
