@@ -1,5 +1,16 @@
 services:
 
+  #---------------- REDIS ----------------
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+
   # ---------------- AUTH DATABASE ----------------
   auth-db:
     image: postgres:15
@@ -40,7 +51,6 @@ services:
     networks:
       - internal
 
-
   # ---------------- PRODUCT DATABASE ----------------
   product-db:
     image: postgres:15
@@ -77,7 +87,6 @@ services:
     networks:
       - internal
 
-
   # ---------------- INVENTORY DATABASE ----------------
   inventory-db:
     image: postgres:15
@@ -113,7 +122,6 @@ services:
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
     networks:
       - internal
-
 
   # ---------------- ORDER DATABASE ----------------
   order-db:
@@ -154,7 +162,6 @@ services:
     networks:
       - internal
 
-
   # ---------------- PAYMENT DATABASE ----------------
   payment-db:
     image: postgres:15
@@ -191,7 +198,6 @@ services:
     networks:
       - internal
 
-
   # ---------------- NOTIFICATION DATABASE ----------------
   notification-db:
     image: postgres:15
@@ -227,7 +233,6 @@ services:
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
     networks:
       - internal
-
 
 volumes:
   auth_data:
