@@ -155,24 +155,76 @@ services:
       - internal
 
 
+  # ---------------- PAYMENT DATABASE ----------------
+  payment-db:
+    image: postgres:15
+    container_name: payment-db
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5438:5432"
+    volumes:
+      - payment_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
   # ---------------- PAYMENT SERVICE ----------------
   payment-service:
     container_name: payment-service
     build: ./payment-service
     image: payment-service
+    depends_on:
+      - payment-db
     ports:
       - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/payment_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
     networks:
       - internal
 
+
+  # ---------------- NOTIFICATION DATABASE ----------------
+  notification-db:
+    image: postgres:15
+    container_name: notification-db
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - notification_data:/var/lib/postgresql/data
+    networks:
+      - internal
 
   # ---------------- NOTIFICATION SERVICE ----------------
   notification-service:
     container_name: notification-service
     build: ./notification-service
     image: notification-service
+    depends_on:
+      - notification-db
     ports:
       - "8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
     networks:
       - internal
 
@@ -182,6 +234,8 @@ volumes:
   product_data:
   inventory_data:
   order_data:
+  payment_data:
+  notification_data:
 
 networks:
   internal:

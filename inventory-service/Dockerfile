@@ -21,6 +21,6 @@ WORKDIR /app
 
 COPY --from=builder /app/target/inventory-service-0.0.1-SNAPSHOT.jar ./inventory-service-0.0.1-SNAPSHOT.jar
 
-EXPOSE 8081
+EXPOSE 8084
 
 ENTRYPOINT ["java", "-jar", "inventory-service-0.0.1-SNAPSHOT.jar"]

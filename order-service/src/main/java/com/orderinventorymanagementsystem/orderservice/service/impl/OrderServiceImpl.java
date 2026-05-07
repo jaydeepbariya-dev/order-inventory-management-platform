@@ -52,6 +52,7 @@ public class OrderServiceImpl implements OrderService {
         order.setUserId(userId);
         order.setStatus(OrderStatus.CREATED);
         order.setPaymentStatus(PaymentStatus.PENDING);
+        order.setTotalAmount(0.0);
 
         Order savedOrder = orderRepository.save(order);
 
@@ -68,7 +69,7 @@ public class OrderServiceImpl implements OrderService {
                 invReq.setQuantity(item.getQuantity());
 
                 restTemplate.postForObject(
-                        "http://localhost:8084/api/v1/inventory/reserve",
+                        "http://inventory-service:8084/api/v1/inventory/reserve",
                         invReq,
                         Void.class);
 
@@ -160,6 +161,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 5. Save Order Items
+        List<OrderItemResponseDTO> orderItemsResponse = new ArrayList<>();
         for (OrderItemRequestDTO item : dto.getItems()) {
 
             OrderItem orderItem = new OrderItem();
@@ -169,15 +171,23 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setPrice(item.getPrice());
 
             orderItemRepository.save(orderItem);
+
+            OrderItemResponseDTO responseItem = new OrderItemResponseDTO();
+            responseItem.setProductId(item.getProductId());
+            responseItem.setQuantity(item.getQuantity());
+            responseItem.setPrice(item.getPrice());
+            orderItemsResponse.add(responseItem);
         }
 
-        return new OrderResponseDTO(
+        OrderResponseDTO response = new OrderResponseDTO(
                 savedOrder.getId(),
                 savedOrder.getUserId(),
                 savedOrder.getTotalAmount(),
                 savedOrder.getStatus().toString(),
                 savedOrder.getPaymentStatus().toString(),
                 savedOrder.getCreatedAt());
+        response.setItems(orderItemsResponse);
+        return response;
     }
 
     @Override
@@ -190,13 +200,26 @@ public class OrderServiceImpl implements OrderService {
             throw new UnauthorizedAccessException("You do not have permission to access this order");
         }
 
-        return new OrderResponseDTO(
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
+        List<OrderItemResponseDTO> itemsResponse = orderItems.stream()
+                .map(item -> {
+                    OrderItemResponseDTO dto = new OrderItemResponseDTO();
+                    dto.setProductId(item.getProductId());
+                    dto.setQuantity(item.getQuantity());
+                    dto.setPrice(item.getPrice());
+                    return dto;
+                })
+                .toList();
+
+        OrderResponseDTO response = new OrderResponseDTO(
                 order.getId(),
                 order.getUserId(),
                 order.getTotalAmount(),
                 order.getStatus().toString(),
                 order.getPaymentStatus().toString(),
                 order.getCreatedAt());
+        response.setItems(itemsResponse);
+        return response;
     }
 
     @Override
@@ -204,12 +227,28 @@ public class OrderServiceImpl implements OrderService {
 
         return orderRepository.findByUserId(userId)
                 .stream()
-                .map(order -> new OrderResponseDTO(
-                        order.getId(),
-                        order.getUserId(),
-                        order.getTotalAmount(),
-                        order.getStatus().toString(),
-                        order.getPaymentStatus().toString(), order.getCreatedAt()))
+                .map(order -> {
+                    List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+                    List<OrderItemResponseDTO> itemsResponse = orderItems.stream()
+                            .map(item -> {
+                                OrderItemResponseDTO dto = new OrderItemResponseDTO();
+                                dto.setProductId(item.getProductId());
+                                dto.setQuantity(item.getQuantity());
+                                dto.setPrice(item.getPrice());
+                                return dto;
+                            })
+                            .toList();
+
+                    OrderResponseDTO response = new OrderResponseDTO(
+                            order.getId(),
+                            order.getUserId(),
+                            order.getTotalAmount(),
+                            order.getStatus().toString(),
+                            order.getPaymentStatus().toString(),
+                            order.getCreatedAt());
+                    response.setItems(itemsResponse);
+                    return response;
+                })
                 .toList();
     }
 }
