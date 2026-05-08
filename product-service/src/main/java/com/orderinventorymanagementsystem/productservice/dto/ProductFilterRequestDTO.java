@@ -1,23 +1,32 @@
 package com.orderinventorymanagementsystem.productservice.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.orderinventorymanagementsystem.productservice.enums.StockStatus;
 
 public class ProductFilterRequestDTO {
 
+    @Schema(description = "Keyword match for product name", example = "watch")
     private String name;
 
+    @Schema(description = "Minimum price filter", example = "50.0")
     private Double minPrice;
 
+    @Schema(description = "Maximum price filter", example = "500.0")
     private Double maxPrice;
 
+    @Schema(description = "Stock status filter", example = "IN_STOCK")
     private StockStatus stockStatus;
 
+    @Schema(description = "Page number for pagination", example = "0")
     private Integer page = 0;
 
+    @Schema(description = "Page size for pagination", example = "10")
     private Integer size = 10;
 
+    @Schema(description = "Field to sort by", example = "createdAt")
     private String sortBy = "createdAt";
 
+    @Schema(description = "Sort direction", example = "desc")
     private String sortDir = "desc";
 
     public String getName() {

@@ -1,14 +1,19 @@
 package com.orderinventorymanagementsystem.paymentservice.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.orderinventorymanagementsystem.paymentservice.enums.PaymentStatus;
 
 import java.util.UUID;
 
 public class PaymentResponseDTO {
 
+    @Schema(description = "Payment identifier", example = "660e8400-e29b-41d4-a716-446655440000")
     private UUID paymentId;
+    @Schema(description = "Order identifier", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID orderId;
+    @Schema(description = "Payment amount", example = "1499.99")
     private Double amount;
+    @Schema(description = "Payment status", example = "SUCCESS")
     private PaymentStatus status;
 
     public PaymentResponseDTO(UUID paymentId, UUID orderId, Double amount, PaymentStatus status) {

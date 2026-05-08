@@ -1,15 +1,25 @@
 package com.orderinventorymanagementsystem.productservice.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.util.UUID;
 
 
 public class ProductResponseDTO implements Serializable{
 
+    @Schema(description = "Unique product identifier", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID id;
+
+    @Schema(description = "Product name", example = "Cool Watch")
     private String name;
+
+    @Schema(description = "Product description", example = "A comfortable leather watch with water resistance")
     private String description;
+
+    @Schema(description = "Product price", example = "199.99")
     private Double price;
+
+    @Schema(description = "Stock status of the product", example = "IN_STOCK")
     private String stockStatus;
 
     public ProductResponseDTO() {

@@ -1,14 +1,24 @@
 package com.orderinventorymanagementsystem.productservice.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.util.List;
 
 public class PageResponseDTO<T> implements Serializable {
 
+    @Schema(description = "Page content")
     private List<T> content;
+
+    @Schema(description = "Current page number", example = "0")
     private int page;
+
+    @Schema(description = "Number of items per page", example = "10")
     private int size;
+
+    @Schema(description = "Total number of elements", example = "100")
     private long totalElements;
+
+    @Schema(description = "Total number of pages", example = "10")
     private int totalPages;
 
     public PageResponseDTO() {
