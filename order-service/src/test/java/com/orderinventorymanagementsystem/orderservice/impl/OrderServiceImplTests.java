@@ -20,6 +20,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -41,6 +43,12 @@ class OrderServiceImplTest {
         @Mock
         private RestTemplate restTemplate;
 
+        @Mock
+        private RedisTemplate<String, Object> redisTemplate;
+
+        @Mock
+        private ValueOperations<String, Object> valueOperations;
+
         @InjectMocks
         private OrderServiceImpl orderService;
 
@@ -49,6 +57,7 @@ class OrderServiceImplTest {
         private UUID productId;
 
         private Order order;
+        private String idempotencyKey;
 
         @BeforeEach
         void setUp() {
@@ -56,6 +65,7 @@ class OrderServiceImplTest {
                 userId = UUID.randomUUID();
                 orderId = UUID.randomUUID();
                 productId = UUID.randomUUID();
+                idempotencyKey = "test-idempotency-key-" + UUID.randomUUID();
 
                 order = new Order();
                 order.setId(orderId);
@@ -63,6 +73,9 @@ class OrderServiceImplTest {
                 order.setStatus(OrderStatus.CONFIRMED);
                 order.setPaymentStatus(PaymentStatus.SUCCESS);
                 order.setTotalAmount(1000.0);
+
+                when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+                when(valueOperations.get(anyString())).thenReturn(null);
         }
 
         @Test
@@ -81,7 +94,6 @@ class OrderServiceImplTest {
                                 .thenReturn(order);
 
                 PaymentResponseDTO paymentResponse = new PaymentResponseDTO();
-
                 paymentResponse.setStatus(PaymentStatus.SUCCESS);
 
                 when(restTemplate.postForObject(
@@ -90,12 +102,14 @@ class OrderServiceImplTest {
                                 eq(PaymentResponseDTO.class)))
                                 .thenReturn(paymentResponse);
 
-                OrderResponseDTO response = orderService.placeOrder(request, userId);
+                OrderResponseDTO response = orderService.placeOrder(request, userId, idempotencyKey);
 
                 assertNotNull(response);
-                assertEquals("FAILED", response.getStatus());
+                assertEquals("CONFIRMED", response.getStatus());
+                assertEquals(PaymentStatus.SUCCESS.toString(), response.getPaymentStatus());
 
                 verify(orderRepository, atLeastOnce()).save(any(Order.class));
+                verify(valueOperations).set(contains("order:idempotency:"), any(), any());
         }
 
         @Test
@@ -104,7 +118,8 @@ class OrderServiceImplTest {
                 OrderRequestDTO request = new OrderRequestDTO();
                 request.setItems(List.of());
 
-                assertThrows(InvalidOrderRequestException.class, () -> orderService.placeOrder(request, userId));
+                assertThrows(InvalidOrderRequestException.class, 
+                        () -> orderService.placeOrder(request, userId, idempotencyKey));
         }
 
         @Test

@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface OrderService {
 
-    OrderResponseDTO placeOrder(OrderRequestDTO dto, UUID userId);
+    OrderResponseDTO placeOrder(OrderRequestDTO dto, UUID userId, String idempotencyKey);
 
     OrderResponseDTO getOrder(UUID orderId, UUID userId);
 

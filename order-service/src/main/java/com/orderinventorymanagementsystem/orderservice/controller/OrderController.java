@@ -22,9 +22,11 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderResponseDTO> placeOrder(
             @RequestBody @Valid OrderRequestDTO dto,
-            @RequestHeader UUID userId) {
+            @RequestHeader UUID userId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
-        OrderResponseDTO res = orderService.placeOrder(dto, userId);
+        OrderResponseDTO res = orderService.placeOrder(dto, userId, idempotencyKey);
+
         return new ResponseEntity<>(res, HttpStatus.CREATED);
     }
 
