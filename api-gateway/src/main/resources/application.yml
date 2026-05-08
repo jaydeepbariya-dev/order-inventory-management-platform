@@ -1,0 +1,57 @@
+server:
+  port: 8000
+
+spring:
+  application:
+    name: api-gateway
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+
+      routes:
+        # AUTH SERVICE
+        - id: auth-service
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/api/v1/auth/**
+
+        # PRODUCT SERVICE
+        - id: product-service
+          uri: http://product-service:8082
+          predicates:
+            - Path=/api/v1/products/**
+
+        # ORDER SERVICE
+        - id: order-service
+          uri: http://order-service:8083
+          predicates:
+            - Path=/api/v1/orders/**
+
+        # INVENTORY SERVICE
+        - id: inventory-service
+          uri: http://inventory-service:8084
+          predicates:
+            - Path=/api/v1/inventory/**
+
+        # PAYMENT SERVICE
+        - id: payment-service
+          uri: http://payment-service:8085
+          predicates:
+            - Path=/api/v1/payments/**
+
+        # NOTIFICATION SERVICE
+        - id: notification-service
+          uri: http://notification-service:8086
+          predicates:
+            - Path=/api/v1/notifications/**
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
