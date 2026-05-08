@@ -11,13 +11,16 @@ import com.orderinventorymanagementsystem.orderservice.entity.OrderItem;
 import com.orderinventorymanagementsystem.orderservice.enums.NotificationType;
 import com.orderinventorymanagementsystem.orderservice.enums.OrderStatus;
 import com.orderinventorymanagementsystem.orderservice.enums.PaymentStatus;
+import com.orderinventorymanagementsystem.orderservice.event.OrderCreatedEvent;
 import com.orderinventorymanagementsystem.orderservice.exception.*;
 import com.orderinventorymanagementsystem.orderservice.repository.*;
 import com.orderinventorymanagementsystem.orderservice.service.OrderService;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -36,13 +39,16 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemRepository orderItemRepository;
     private final RestTemplate restTemplate;
     private final RedisTemplate redisTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public OrderServiceImpl(OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository, RestTemplate restTemplate, RedisTemplate redisTemplate) {
+            OrderItemRepository orderItemRepository, RestTemplate restTemplate, RedisTemplate redisTemplate,
+            KafkaTemplate kafkaTemplate) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.restTemplate = restTemplate;
         this.redisTemplate = redisTemplate;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -103,6 +109,16 @@ public class OrderServiceImpl implements OrderService {
 
             savedOrder.setStatus(OrderStatus.RESERVED);
             orderRepository.save(savedOrder);
+
+            OrderCreatedEvent event = new OrderCreatedEvent(
+                    savedOrder.getId(),
+                    savedOrder.getUserId(),
+                    totalAmount);
+
+            kafkaTemplate.send(
+                    "order-created-topic",
+                    savedOrder.getId().toString(),
+                    event);
 
             // 5. Call Payment Service
             PaymentRequestDTO paymentRequest = new PaymentRequestDTO();
