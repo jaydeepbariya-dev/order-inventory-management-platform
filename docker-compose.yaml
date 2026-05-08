@@ -241,6 +241,7 @@ volumes:
   order_data:
   payment_data:
   notification_data:
+  redis_data:
 
 networks:
   internal:
