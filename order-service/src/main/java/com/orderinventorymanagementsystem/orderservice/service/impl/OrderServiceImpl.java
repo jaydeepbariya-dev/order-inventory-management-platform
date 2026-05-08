@@ -15,6 +15,8 @@ import com.orderinventorymanagementsystem.orderservice.exception.*;
 import com.orderinventorymanagementsystem.orderservice.repository.*;
 import com.orderinventorymanagementsystem.orderservice.service.OrderService;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -41,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
+    @CacheEvict(value = { "orderById", "ordersByUser" }, allEntries = true)
     public OrderResponseDTO placeOrder(OrderRequestDTO dto, UUID userId) {
 
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
@@ -191,6 +194,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Cacheable(value = "orderById", key = "#orderId + '-' + #userId")
     public OrderResponseDTO getOrder(UUID orderId, UUID userId) {
 
         Order order = orderRepository.findById(orderId)
@@ -223,6 +227,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Cacheable(value = "ordersByUser", key = "#userId")
     public List<OrderResponseDTO> getOrdersByUserId(UUID userId) {
 
         return orderRepository.findByUserId(userId)

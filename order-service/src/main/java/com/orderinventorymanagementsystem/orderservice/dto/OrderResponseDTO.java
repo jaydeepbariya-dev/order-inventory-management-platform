@@ -1,10 +1,11 @@
 package com.orderinventorymanagementsystem.orderservice.dto;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public class OrderResponseDTO {
+public class OrderResponseDTO implements Serializable{
 
     private UUID id;
     private UUID userId;
