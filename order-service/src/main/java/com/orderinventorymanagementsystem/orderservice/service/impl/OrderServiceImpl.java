@@ -2,13 +2,8 @@ package com.orderinventorymanagementsystem.orderservice.service.impl;
 
 import com.orderinventorymanagementsystem.orderservice.dto.*;
 import com.orderinventorymanagementsystem.orderservice.dto.client.InventoryRequestDTO;
-import com.orderinventorymanagementsystem.orderservice.dto.client.NotificationRequestDTO;
-import com.orderinventorymanagementsystem.orderservice.dto.client.NotificationResponseDTO;
-import com.orderinventorymanagementsystem.orderservice.dto.client.PaymentRequestDTO;
-import com.orderinventorymanagementsystem.orderservice.dto.client.PaymentResponseDTO;
 import com.orderinventorymanagementsystem.orderservice.entity.Order;
 import com.orderinventorymanagementsystem.orderservice.entity.OrderItem;
-import com.orderinventorymanagementsystem.orderservice.enums.NotificationType;
 import com.orderinventorymanagementsystem.orderservice.enums.OrderStatus;
 import com.orderinventorymanagementsystem.orderservice.enums.PaymentStatus;
 import com.orderinventorymanagementsystem.orderservice.event.OrderCreatedEvent;
@@ -16,7 +11,6 @@ import com.orderinventorymanagementsystem.orderservice.exception.*;
 import com.orderinventorymanagementsystem.orderservice.repository.*;
 import com.orderinventorymanagementsystem.orderservice.service.OrderService;
 
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -38,12 +32,16 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final RestTemplate restTemplate;
-    private final RedisTemplate redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public OrderServiceImpl(OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository, RestTemplate restTemplate, RedisTemplate redisTemplate,
-            KafkaTemplate kafkaTemplate) {
+    public OrderServiceImpl(
+            OrderRepository orderRepository,
+            OrderItemRepository orderItemRepository,
+            RestTemplate restTemplate,
+            RedisTemplate<String, Object> redisTemplate,
+            KafkaTemplate<String, Object> kafkaTemplate) {
+
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.restTemplate = restTemplate;
@@ -59,23 +57,37 @@ public class OrderServiceImpl implements OrderService {
             UUID userId,
             String idempotencyKey) {
 
-        // 1. Check Redis for existing response
+        // ---------------------------------------------------
+        // 1. CHECK IDEMPOTENCY
+        // ---------------------------------------------------
+
         String redisKey = "order:idempotency:" + idempotencyKey;
 
-        OrderResponseDTO cachedResponse = (OrderResponseDTO) redisTemplate.opsForValue().get(redisKey);
+        OrderResponseDTO cachedResponse = (OrderResponseDTO) redisTemplate
+                .opsForValue()
+                .get(redisKey);
 
         if (cachedResponse != null) {
             return cachedResponse;
         }
 
-        // 2. Validate request
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+        // ---------------------------------------------------
+        // 2. VALIDATE REQUEST
+        // ---------------------------------------------------
+
+        if (dto.getItems() == null
+                || dto.getItems().isEmpty()) {
+
             throw new InvalidOrderRequestException(
                     "Order must contain at least one item");
         }
 
-        // 3. Create Order
+        // ---------------------------------------------------
+        // 3. CREATE ORDER
+        // ---------------------------------------------------
+
         Order order = new Order();
+
         order.setUserId(userId);
         order.setStatus(OrderStatus.CREATED);
         order.setPaymentStatus(PaymentStatus.PENDING);
@@ -83,13 +95,16 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
+        // ---------------------------------------------------
+        // 4. RESERVE INVENTORY (SYNC REST)
+        // ---------------------------------------------------
+
         double totalAmount = 0;
 
         List<InventoryRequestDTO> reservedItems = new ArrayList<>();
 
         try {
 
-            // 4. Reserve Inventory
             for (OrderItemRequestDTO item : dto.getItems()) {
 
                 InventoryRequestDTO invReq = new InventoryRequestDTO();
@@ -97,6 +112,7 @@ public class OrderServiceImpl implements OrderService {
                 invReq.setProductId(item.getProductId());
                 invReq.setQuantity(item.getQuantity());
 
+                // synchronous validation
                 restTemplate.postForObject(
                         "http://inventory-service:8084/api/v1/inventory/reserve",
                         invReq,
@@ -107,94 +123,30 @@ public class OrderServiceImpl implements OrderService {
                 totalAmount += item.getPrice() * item.getQuantity();
             }
 
-            savedOrder.setStatus(OrderStatus.RESERVED);
-            orderRepository.save(savedOrder);
-
-            OrderCreatedEvent event = new OrderCreatedEvent(
-                    savedOrder.getId(),
-                    savedOrder.getUserId(),
-                    totalAmount);
-
-            kafkaTemplate.send(
-                    "order-created-topic",
-                    savedOrder.getId().toString(),
-                    event);
-
-            // 5. Call Payment Service
-            PaymentRequestDTO paymentRequest = new PaymentRequestDTO();
-
-            paymentRequest.setOrderId(savedOrder.getId());
-            paymentRequest.setAmount(totalAmount);
-
-            PaymentResponseDTO paymentResponse = restTemplate.postForObject(
-                    "http://payment-service:8085/api/v1/payments",
-                    paymentRequest,
-                    PaymentResponseDTO.class);
-
-            if (paymentResponse == null
-                    || paymentResponse.getStatus() == null) {
-
-                throw new RuntimeException("Payment failed");
-            }
-
-            // 6. Handle Payment Success
-            if (paymentResponse.getStatus() == PaymentStatus.SUCCESS) {
-
-                for (InventoryRequestDTO item : reservedItems) {
-
-                    restTemplate.postForObject(
-                            "http://inventory-service:8084/api/v1/inventory/deduct",
-                            item,
-                            Void.class);
-                }
-
-                savedOrder.setStatus(OrderStatus.CONFIRMED);
-                savedOrder.setPaymentStatus(
-                        PaymentStatus.SUCCESS);
-
-            } else {
-
-                // 7. Payment Failure -> Release Inventory
-                for (InventoryRequestDTO item : reservedItems) {
-
-                    restTemplate.postForObject(
-                            "http://inventory-service:8084/api/v1/inventory/release",
-                            item,
-                            Void.class);
-                }
-
-                savedOrder.setStatus(OrderStatus.FAILED);
-                savedOrder.setPaymentStatus(
-                        PaymentStatus.FAILED);
-            }
-
         } catch (Exception ex) {
 
-            // 8. Any failure -> Release Inventory
-            for (InventoryRequestDTO item : reservedItems) {
-
-                try {
-
-                    restTemplate.postForObject(
-                            "http://inventory-service:8084/api/v1/inventory/release",
-                            item,
-                            Void.class);
-
-                } catch (Exception ignore) {
-                    System.out.println("Inventory release failed");
-                }
-            }
-
             savedOrder.setStatus(OrderStatus.FAILED);
-            savedOrder.setPaymentStatus(PaymentStatus.FAILED);
+
+            orderRepository.save(savedOrder);
+
+            throw new RuntimeException(
+                    "Inventory reservation failed");
         }
 
+        // ---------------------------------------------------
+        // 5. SAVE RESERVED STATUS
+        // ---------------------------------------------------
+
+        savedOrder.setStatus(OrderStatus.RESERVED);
         savedOrder.setTotalAmount(totalAmount);
 
         orderRepository.save(savedOrder);
 
-        // 9. Save Order Items
-        List<OrderItemResponseDTO> orderItemsResponse = new ArrayList<>();
+        // ---------------------------------------------------
+        // 6. SAVE ORDER ITEMS
+        // ---------------------------------------------------
+
+        List<OrderItemResponseDTO> responseItems = new ArrayList<>();
 
         for (OrderItemRequestDTO item : dto.getItems()) {
 
@@ -213,28 +165,27 @@ public class OrderServiceImpl implements OrderService {
             responseItem.setQuantity(item.getQuantity());
             responseItem.setPrice(item.getPrice());
 
-            orderItemsResponse.add(responseItem);
+            responseItems.add(responseItem);
         }
 
-        // 10. Notification
-        NotificationRequestDTO notificationRequestDTO = new NotificationRequestDTO();
+        // ---------------------------------------------------
+        // 7. PUBLISH EVENT TO KAFKA
+        // ---------------------------------------------------
 
-        notificationRequestDTO.setMessage("Order Placed");
-        notificationRequestDTO.setType(NotificationType.EMAIL);
-        notificationRequestDTO.setUserId(userId);
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                savedOrder.getId(),
+                savedOrder.getUserId(),
+                totalAmount);
 
-        try {
+        kafkaTemplate.send(
+                "order-created-topic",
+                savedOrder.getId().toString(),
+                event);
 
-            restTemplate.postForObject(
-                    "http://notification-service:8086/api/v1/notifications",
-                    notificationRequestDTO,
-                    NotificationResponseDTO.class);
+        // ---------------------------------------------------
+        // 8. BUILD RESPONSE
+        // ---------------------------------------------------
 
-        } catch (Exception e) {
-            System.out.println("Notification failed");
-        }
-
-        // 11. Build Response
         OrderResponseDTO response = new OrderResponseDTO(
                 savedOrder.getId(),
                 savedOrder.getUserId(),
@@ -243,9 +194,12 @@ public class OrderServiceImpl implements OrderService {
                 savedOrder.getPaymentStatus().toString(),
                 savedOrder.getCreatedAt());
 
-        response.setItems(orderItemsResponse);
+        response.setItems(responseItems);
 
-        // 12. Store response in Redis
+        // ---------------------------------------------------
+        // 9. STORE IDEMPOTENT RESPONSE
+        // ---------------------------------------------------
+
         redisTemplate.opsForValue().set(
                 redisKey,
                 response,
