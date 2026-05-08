@@ -4,6 +4,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
@@ -35,6 +38,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = {
+            "productById",
+            "allProducts",
+            "searchProducts",
+            "filteredProducts"
+    }, allEntries = true)
     public ProductResponseDTO createProduct(ProductRequestDTO dto, UUID sellerId, UUID tenantId, String role) {
 
         if (!"SELLER".equals(role)) {
@@ -72,6 +81,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "productById", key = "#productId + '-' + #tenantId")
     public ProductResponseDTO getProductById(UUID productId, UUID tenantId) {
 
         Product product = productRepository.findByIdAndTenantId(productId, tenantId)
@@ -81,6 +91,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "allProducts", key = "#tenantId")
     public List<ProductResponseDTO> getAllProducts(UUID tenantId) {
 
         return productRepository.findByTenantId(tenantId)
@@ -90,6 +101,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = {
+            "productById",
+            "allProducts",
+            "searchProducts",
+            "filteredProducts"
+    }, allEntries = true)
     public ProductResponseDTO updateProduct(UUID productId, ProductRequestDTO dto,
             UUID sellerId, UUID tenantId, String role) {
 
@@ -114,6 +131,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = {
+            "productById",
+            "allProducts",
+            "searchProducts",
+            "filteredProducts"
+    }, allEntries = true)
     public void deleteProduct(UUID productId, UUID sellerId, UUID tenantId, String role) {
 
         if (!"SELLER".equals(role)) {

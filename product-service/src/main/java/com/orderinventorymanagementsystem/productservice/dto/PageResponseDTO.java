@@ -1,8 +1,9 @@
 package com.orderinventorymanagementsystem.productservice.dto;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class PageResponseDTO<T> {
+public class PageResponseDTO<T> implements Serializable {
 
     private List<T> content;
     private int page;
