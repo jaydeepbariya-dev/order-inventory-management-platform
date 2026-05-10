@@ -24,6 +24,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.client.RestTemplate;
 
+import io.github.resilience4j.retry.Retry;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +44,9 @@ class OrderServiceImplTest {
 
         @Mock
         private RestTemplate restTemplate;
+
+        @Mock
+        private Retry inventoryServiceRetry;
 
         @Mock
         private RedisTemplate<String, Object> redisTemplate;

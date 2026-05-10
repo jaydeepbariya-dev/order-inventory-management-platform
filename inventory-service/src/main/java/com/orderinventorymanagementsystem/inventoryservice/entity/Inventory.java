@@ -5,7 +5,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "inventory")
+@Table(name = "inventory", indexes = {
+        @Index(name = "idx_inventory_product", columnList = "product_id")
+})
 public class Inventory {
 
     @Id

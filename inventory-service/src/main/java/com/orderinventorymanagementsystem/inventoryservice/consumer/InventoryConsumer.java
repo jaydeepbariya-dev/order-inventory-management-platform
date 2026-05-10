@@ -3,20 +3,22 @@ package com.orderinventorymanagementsystem.inventoryservice.consumer;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.orderinventorymanagementsystem.inventoryservice.event.PaymentFailedEvent;
 import com.orderinventorymanagementsystem.inventoryservice.event.PaymentSuccessEvent;
 
 @Service
 public class InventoryConsumer {
 
+    private static final Logger logger = LoggerFactory.getLogger(InventoryConsumer.class);
+
     @KafkaListener(topics = "payment-success-topic", groupId = "inventory-group")
     public void consumePaymentSuccess(
             PaymentSuccessEvent event) {
 
-        System.out.println(
-                "Deduct inventory permanently for order: "
-                        + event.getOrderId());
-
+        logger.info("Deducting inventory permanently for order: {}", event.getOrderId());
         // reservedQty -> permanently deducted
     }
 
@@ -24,10 +26,7 @@ public class InventoryConsumer {
     public void consumePaymentFailed(
             PaymentFailedEvent event) {
 
-        System.out.println(
-                "Release reserved inventory for order: "
-                        + event.getOrderId());
-
+        logger.info("Releasing reserved inventory for order: {}", event.getOrderId());
         // reservedQty -> availableQty
     }
 }

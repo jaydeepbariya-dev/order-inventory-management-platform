@@ -15,6 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.RestClientException;
 
+import io.github.resilience4j.retry.Retry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.orderinventorymanagementsystem.productservice.dto.PageResponseDTO;
 import com.orderinventorymanagementsystem.productservice.exception.*;
 import com.orderinventorymanagementsystem.productservice.dto.ProductFilterRequestDTO;
@@ -29,12 +34,16 @@ import com.orderinventorymanagementsystem.productservice.service.ProductService;
 @Service
 public class ProductServiceImpl implements ProductService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ProductServiceImpl.class);
+
     private final ProductRepository productRepository;
     private final RestTemplate restTemplate;
+    private final Retry inventoryServiceRetry;
 
-    public ProductServiceImpl(ProductRepository productRepository, RestTemplate restTemplate) {
+    public ProductServiceImpl(ProductRepository productRepository, RestTemplate restTemplate, Retry inventoryServiceRetry) {
         this.productRepository = productRepository;
         this.restTemplate = restTemplate;
+        this.inventoryServiceRetry = inventoryServiceRetry;
     }
 
     @Override
@@ -46,12 +55,16 @@ public class ProductServiceImpl implements ProductService {
     }, allEntries = true)
     public ProductResponseDTO createProduct(ProductRequestDTO dto, UUID sellerId, UUID tenantId, String role) {
 
+        logger.info("Creating product for seller: {}, tenant: {}, role: {}", sellerId, tenantId, role);
+
         if (!"SELLER".equals(role)) {
+            logger.warn("Unauthorized product creation attempt by user with role: {}", role);
             throw new UnauthorizedException("Access denied: Only SELLER role can create products");
         }
 
         productRepository.findByName(dto.getName())
                 .ifPresent(p -> {
+                    logger.warn("Product creation failed - product with name '{}' already exists", dto.getName());
                     throw new ProductAlreadyExistsException("Product with name '" + dto.getName() + "' already exists");
                 });
 
@@ -64,19 +77,24 @@ public class ProductServiceImpl implements ProductService {
         product.setTenantId(tenantId);
 
         Product saved = productRepository.save(product);
+        logger.info("Product created with ID: {} for seller: {}", saved.getId(), sellerId);
 
         InventoryRequestDTO request = new InventoryRequestDTO();
         request.setProductId(saved.getId());
         request.setQuantity(dto.getQuantity());
 
         try {
-            String res = restTemplate.postForObject("http://inventory-service:8084/api/v1/inventory", request,
-                    String.class);
-            System.out.println(res);
+            logger.debug("Initializing inventory for product: {}, quantity: {}", saved.getId(), dto.getQuantity());
+            String res = Retry.decorateSupplier(inventoryServiceRetry, () ->
+                restTemplate.postForObject("http://inventory-service:8084/api/v1/inventory", request, String.class)
+            ).get();
+            logger.debug("Inventory initialization response: {}", res);
         } catch (RestClientException ex) {
+            logger.error("Failed to initialize inventory for product: {}, error: {}", saved.getId(), ex.getMessage(), ex);
             throw new InventoryServiceException("Failed to initialize inventory for product: " + ex.getMessage());
         }
 
+        logger.info("Product creation completed successfully for product: {}", saved.getId());
         return map(saved);
     }
 

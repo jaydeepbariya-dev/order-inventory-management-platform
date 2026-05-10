@@ -21,6 +21,11 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import io.github.resilience4j.retry.Retry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,24 +34,29 @@ import java.util.UUID;
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final RestTemplate restTemplate;
     private final RedisTemplate<String, Object> redisTemplate;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final Retry inventoryServiceRetry;
 
     public OrderServiceImpl(
             OrderRepository orderRepository,
             OrderItemRepository orderItemRepository,
             RestTemplate restTemplate,
             RedisTemplate<String, Object> redisTemplate,
-            KafkaTemplate<String, Object> kafkaTemplate) {
+            KafkaTemplate<String, Object> kafkaTemplate,
+            Retry inventoryServiceRetry) {
 
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.restTemplate = restTemplate;
         this.redisTemplate = redisTemplate;
         this.kafkaTemplate = kafkaTemplate;
+        this.inventoryServiceRetry = inventoryServiceRetry;
     }
 
     @Override
@@ -56,6 +66,8 @@ public class OrderServiceImpl implements OrderService {
             OrderRequestDTO dto,
             UUID userId,
             String idempotencyKey) {
+
+        logger.info("Starting order placement for user: {}, idempotencyKey: {}", userId, maskIdempotencyKey(idempotencyKey));
 
         // ---------------------------------------------------
         // 1. CHECK IDEMPOTENCY
@@ -68,6 +80,7 @@ public class OrderServiceImpl implements OrderService {
                 .get(redisKey);
 
         if (cachedResponse != null) {
+            logger.info("Idempotent order found for user: {}, returning cached response", userId);
             return cachedResponse;
         }
 
@@ -78,9 +91,12 @@ public class OrderServiceImpl implements OrderService {
         if (dto.getItems() == null
                 || dto.getItems().isEmpty()) {
 
+            logger.warn("Invalid order request for user: {} - no items provided", userId);
             throw new InvalidOrderRequestException(
                     "Order must contain at least one item");
         }
+
+        logger.debug("Order validation passed for user: {}, items count: {}", userId, dto.getItems().size());
 
         // ---------------------------------------------------
         // 3. CREATE ORDER
@@ -94,11 +110,13 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(0.0);
 
         Order savedOrder = orderRepository.save(order);
+        logger.info("Order created with ID: {} for user: {}", savedOrder.getId(), userId);
 
         // ---------------------------------------------------
         // 4. RESERVE INVENTORY (SYNC REST)
         // ---------------------------------------------------
 
+        logger.info("Starting inventory reservation for order: {}", savedOrder.getId());
         double totalAmount = 0;
 
         List<InventoryRequestDTO> reservedItems = new ArrayList<>();
@@ -112,21 +130,27 @@ public class OrderServiceImpl implements OrderService {
                 invReq.setProductId(item.getProductId());
                 invReq.setQuantity(item.getQuantity());
 
-                // synchronous validation
-                restTemplate.postForObject(
-                        "http://inventory-service:8084/api/v1/inventory/reserve",
-                        invReq,
-                        Void.class);
+                logger.debug("Reserving inventory for product: {}, quantity: {}", item.getProductId(), item.getQuantity());
+
+                // synchronous validation with retry
+                Retry.decorateRunnable(inventoryServiceRetry, () ->
+                    restTemplate.postForObject(
+                            "http://inventory-service:8084/api/v1/inventory/reserve",
+                            invReq,
+                            Void.class)
+                ).run();
 
                 reservedItems.add(invReq);
 
                 totalAmount += item.getPrice() * item.getQuantity();
             }
 
+            logger.info("Inventory reservation completed for order: {}, total amount: {}", savedOrder.getId(), totalAmount);
+
         } catch (Exception ex) {
 
+            logger.error("Inventory reservation failed for order: {}, error: {}", savedOrder.getId(), ex.getMessage(), ex);
             savedOrder.setStatus(OrderStatus.FAILED);
-
             orderRepository.save(savedOrder);
 
             throw new RuntimeException(
@@ -141,11 +165,13 @@ public class OrderServiceImpl implements OrderService {
         savedOrder.setTotalAmount(totalAmount);
 
         orderRepository.save(savedOrder);
+        logger.info("Order status updated to RESERVED for order: {}", savedOrder.getId());
 
         // ---------------------------------------------------
         // 6. SAVE ORDER ITEMS
         // ---------------------------------------------------
 
+        logger.debug("Saving order items for order: {}", savedOrder.getId());
         List<OrderItemResponseDTO> responseItems = new ArrayList<>();
 
         for (OrderItemRequestDTO item : dto.getItems()) {
@@ -270,5 +296,15 @@ public class OrderServiceImpl implements OrderService {
                     return response;
                 })
                 .toList();
+    }
+
+    /**
+     * Masks sensitive parts of idempotency key for secure logging
+     */
+    private String maskIdempotencyKey(String key) {
+        if (key == null || key.length() <= 8) {
+            return "***";
+        }
+        return key.substring(0, 4) + "***" + key.substring(key.length() - 4);
     }
 }

@@ -7,7 +7,12 @@ import java.util.UUID;
 import com.orderinventorymanagementsystem.productservice.enums.StockStatus;
 
 @Entity
-@Table(name = "products")
+@Table(name = "products",
+    indexes = {
+        @Index(name = "idx_product_tenant", columnList = "tenant_id"),
+        @Index(name = "idx_product_seller", columnList = "seller_id")
+    }
+)
 public class Product {
 
     @Id
