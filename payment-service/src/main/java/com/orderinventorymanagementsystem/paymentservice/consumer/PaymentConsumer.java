@@ -29,7 +29,7 @@ public class PaymentConsumer {
             groupId = "payment-group")
     public void consumeOrderCreated(OrderCreatedEvent event) {
 
-        logger.info("Payment processing started for order: {}, amount: {}", event.getOrderId(), event.getTotalAmount());
+        logger.info("Payment processing started for order: {}, amount: {}", event.getOrderId(), event.getAmount());
 
         boolean paymentSuccess = new Random().nextBoolean();
 

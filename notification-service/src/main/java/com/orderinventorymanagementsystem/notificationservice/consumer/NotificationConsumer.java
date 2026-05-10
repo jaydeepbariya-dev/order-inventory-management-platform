@@ -22,7 +22,7 @@ public class NotificationConsumer {
             groupId = "notification-group")
     public void orderCreated(OrderCreatedEvent event) {
 
-        logger.info("Sending notification for order placed: {}, amount: {}", event.getOrderId(), event.getTotalAmount());
+        logger.info("Sending notification for order placed: {}, amount: {}", event.getOrderId(), event.getAmount());
     }
 
     @KafkaListener(
