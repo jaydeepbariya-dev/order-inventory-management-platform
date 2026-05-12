@@ -1,40 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <!-- Console appender for development -->
+    <!-- Console appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
         </encoder>
     </appender>
 
-    <!-- File appender for production -->
+    <!-- File appender -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/api-gateway.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/api-gateway.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
 
-    <!-- Access log for API requests -->
-    <appender name="ACCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/api-gateway-access.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/api-gateway-access.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+        <!-- Current active log file -->
+        <file>logs/apigateway-service.log</file>
+
+        <!-- Rolling policy -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+
+            <!-- Daily + indexed rollover -->
+            <fileNamePattern>
+                logs/apigateway-service.%d{yyyy-MM-dd}.%i.log
+            </fileNamePattern>
+
+            <!-- Roll over when file reaches size -->
             <maxFileSize>10MB</maxFileSize>
+
+            <!-- Keep logs for 30 days -->
             <maxHistory>30</maxHistory>
+
+            <!-- Total log storage cap -->
             <totalSizeCap>1GB</totalSizeCap>
+
         </rollingPolicy>
+
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %X{requestId} %X{userId} %X{tenantId} %msg%n</pattern>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
         </encoder>
+
     </appender>
 
     <!-- Root logger -->
@@ -43,20 +51,28 @@
         <appender-ref ref="FILE"/>
     </root>
 
-    <!-- Application specific loggers -->
-    <logger name="com.orderinventorymanagementsystem.apigateway" level="DEBUG" additivity="false">
+    <!-- Application logs -->
+    <logger name="com.orderinventorymanagementsystem.apigatewayservice"
+            level="DEBUG"
+            additivity="false">
+
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
+
     </logger>
 
-    <!-- Spring Cloud Gateway logging -->
-    <logger name="org.springframework.cloud.gateway" level="DEBUG"/>
+    <!-- Spring -->
+    <logger name="org.springframework" level="INFO"/>
     <logger name="org.springframework.web" level="DEBUG"/>
     <logger name="org.springframework.security" level="DEBUG"/>
 
-    <!-- Redis logging -->
-    <logger name="org.springframework.data.redis" level="INFO"/>
+    <!-- Hibernate -->
+    <logger name="org.hibernate" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
 
-    <!-- JWT logging - be careful with sensitive data -->
-    <logger name="com.orderinventorymanagementsystem.apigateway.security" level="INFO"/>
+    <!-- Security -->
+    <logger name="com.orderinventorymanagementsystem.apigatewayservice.security"
+            level="INFO"/>
+
 </configuration>

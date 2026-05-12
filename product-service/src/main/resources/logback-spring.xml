@@ -1,26 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <!-- Console appender for development -->
+    <!-- Console appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
         </encoder>
     </appender>
 
-    <!-- File appender for production -->
+    <!-- File appender -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+        <!-- Current active log file -->
         <file>logs/product-service.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/product-service.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+
+        <!-- Rolling policy -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+
+            <!-- Daily + indexed rollover -->
+            <fileNamePattern>
+                logs/product-service.%d{yyyy-MM-dd}.%i.log
+            </fileNamePattern>
+
+            <!-- Roll over when file reaches size -->
             <maxFileSize>10MB</maxFileSize>
+
+            <!-- Keep logs for 30 days -->
             <maxHistory>30</maxHistory>
+
+            <!-- Total log storage cap -->
             <totalSizeCap>1GB</totalSizeCap>
+
         </rollingPolicy>
+
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
         </encoder>
+
     </appender>
 
     <!-- Root logger -->
@@ -29,26 +51,28 @@
         <appender-ref ref="FILE"/>
     </root>
 
-    <!-- Application specific loggers -->
-    <logger name="com.orderinventorymanagementsystem.productservice" level="DEBUG" additivity="false">
+    <!-- Application logs -->
+    <logger name="com.orderinventorymanagementsystem.productservice"
+            level="DEBUG"
+            additivity="false">
+
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
+
     </logger>
 
-    <!-- Spring framework logging -->
+    <!-- Spring -->
     <logger name="org.springframework" level="INFO"/>
     <logger name="org.springframework.web" level="DEBUG"/>
     <logger name="org.springframework.security" level="DEBUG"/>
 
-    <!-- Hibernate logging -->
+    <!-- Hibernate -->
     <logger name="org.hibernate" level="INFO"/>
     <logger name="org.hibernate.SQL" level="DEBUG"/>
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
 
-    <!-- Kafka logging -->
-    <logger name="org.apache.kafka" level="INFO"/>
-    <logger name="org.apache.kafka.clients" level="WARN"/>
+    <!-- Security -->
+    <logger name="com.orderinventorymanagementsystem.productservice.security"
+            level="INFO"/>
 
-    <!-- Security: Mask sensitive data -->
-    <logger name="com.orderinventorymanagementsystem.productservice.security" level="INFO"/>
 </configuration>
