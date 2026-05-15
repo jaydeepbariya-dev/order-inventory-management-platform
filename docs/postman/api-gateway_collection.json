@@ -1,0 +1,964 @@
+{
+  "info": {
+    "_postman_id": "7f8c2d5e-9a1b-4c3d-8e5f-6b2a1c9d7e4f",
+    "name": "API Gateway - order-inventory-management-system",
+    "description": "Postman collection for testing the Order & Inventory Management system through API Gateway on port 8000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "33178832"
+  },
+  "variable": [
+    {
+      "key": "GATEWAY_BASE_URL",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "AUTH_BASE_URL",
+      "value": "{{GATEWAY_BASE_URL}}/auth/api/v1/auth",
+      "type": "string"
+    },
+    {
+      "key": "PRODUCT_BASE_URL",
+      "value": "{{GATEWAY_BASE_URL}}/products/api/v1/products",
+      "type": "string"
+    },
+    {
+      "key": "ORDER_BASE_URL",
+      "value": "{{GATEWAY_BASE_URL}}/orders/api/v1/orders",
+      "type": "string"
+    },
+    {
+      "key": "INVENTORY_BASE_URL",
+      "value": "{{GATEWAY_BASE_URL}}/inventory/api/v1/inventory",
+      "type": "string"
+    },
+    {
+      "key": "PAYMENT_BASE_URL",
+      "value": "{{GATEWAY_BASE_URL}}/payments/api/v1/payments",
+      "type": "string"
+    },
+    {
+      "key": "NOTIFICATION_BASE_URL",
+      "value": "{{GATEWAY_BASE_URL}}/notifications/api/v1/notifications",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "buyerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "role",
+      "value": "SELLER",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth Service (via API Gateway)",
+      "item": [
+        {
+          "name": "Register Tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('tenantId', response.tenantId);",
+                  "    console.log('Tenant ID set:', response.tenantId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":\"TenantTest\",\n    \"email\":\"tenant@test.com\",\n    \"password\":\"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{AUTH_BASE_URL}}/tenant",
+              "host": [
+                "{{AUTH_BASE_URL}}"
+              ],
+              "path": [
+                "tenant"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('userId', response.userId);",
+                  "    pm.environment.set('sellerId', response.userId);",
+                  "    pm.environment.set('role', response.role);",
+                  "    console.log('User ID set:', response.userId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":\"SellerTest\",\n    \"email\":\"seller@test.com\",\n    \"password\":\"password123\",\n    \"role\":\"SELLER\",\n    \"tenantId\": \"{{tenantId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{AUTH_BASE_URL}}/register",
+              "host": [
+                "{{AUTH_BASE_URL}}"
+              ],
+              "path": [
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('accessToken', response.accessToken);",
+                  "    pm.environment.set('refreshToken', response.refreshToken);",
+                  "    pm.environment.set('userId', response.userId);",
+                  "    pm.environment.set('tenantId', response.tenantId);",
+                  "    pm.environment.set('role', response.role);",
+                  "    console.log('Tokens set for user:', response.userId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\":\"seller@test.com\",\n    \"password\":\"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{AUTH_BASE_URL}}/login",
+              "host": [
+                "{{AUTH_BASE_URL}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('accessToken', response.accessToken);",
+                  "    pm.environment.set('refreshToken', response.refreshToken);",
+                  "    console.log('Tokens refreshed');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{AUTH_BASE_URL}}/refresh",
+              "host": [
+                "{{AUTH_BASE_URL}}"
+              ],
+              "path": [
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{AUTH_BASE_URL}}/logout",
+              "host": [
+                "{{AUTH_BASE_URL}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Auth Service endpoints accessed through API Gateway"
+    },
+    {
+      "name": "Product Service (via API Gateway)",
+      "item": [
+        {
+          "name": "Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('productId', response.id);",
+                  "    console.log('Product ID set:', response.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "sellerId",
+                "value": "{{sellerId}}",
+                "type": "text"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "role",
+                "value": "{{role}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":\"Test Product\",\n    \"description\":\"High Quality Test Product\",\n    \"price\": 150.0,\n    \"stockStatus\":\"IN_STOCK\",\n    \"quantity\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{PRODUCT_BASE_URL}}",
+              "host": [
+                "{{PRODUCT_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Products",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "sellerId",
+                "value": "{{sellerId}}",
+                "type": "text"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "role",
+                "value": "{{role}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{PRODUCT_BASE_URL}}",
+              "host": [
+                "{{PRODUCT_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product By ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "sellerId",
+                "value": "{{sellerId}}",
+                "type": "text"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "role",
+                "value": "{{role}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{PRODUCT_BASE_URL}}/{{productId}}",
+              "host": [
+                "{{PRODUCT_BASE_URL}}"
+              ],
+              "path": [
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product By ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "sellerId",
+                "value": "{{sellerId}}",
+                "type": "text"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "role",
+                "value": "{{role}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":\"Updated Product\",\n    \"description\":\"Updated Description\",\n    \"price\": 200.0,\n    \"stockStatus\":\"IN_STOCK\",\n    \"quantity\": 75\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{PRODUCT_BASE_URL}}/{{productId}}",
+              "host": [
+                "{{PRODUCT_BASE_URL}}"
+              ],
+              "path": [
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Product By ID",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "sellerId",
+                "value": "{{sellerId}}",
+                "type": "text"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "role",
+                "value": "{{role}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{PRODUCT_BASE_URL}}/{{productId}}",
+              "host": [
+                "{{PRODUCT_BASE_URL}}"
+              ],
+              "path": [
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Products",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{PRODUCT_BASE_URL}}/search?keyword=Product",
+              "host": [
+                "{{PRODUCT_BASE_URL}}"
+              ],
+              "path": [
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "Product"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Products",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":\"Product\",\n    \"minPrice\": 50.0,\n    \"maxPrice\": 250.0,\n    \"stockStatus\": \"IN_STOCK\" \n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{PRODUCT_BASE_URL}}/filter",
+              "host": [
+                "{{PRODUCT_BASE_URL}}"
+              ],
+              "path": [
+                "filter"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Product Service endpoints accessed through API Gateway"
+    },
+    {
+      "name": "Order Service (via API Gateway)",
+      "item": [
+        {
+          "name": "Place Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('orderId', response.id);",
+                  "    console.log('Order ID set:', response.id);",
+                  "    console.log('Order Status:', response.status);",
+                  "    console.log('Order Total:', response.totalAmount);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "userId",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 3,\n      \"price\": 150.00\n    },\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2,\n      \"price\": 200.00\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{ORDER_BASE_URL}}",
+              "host": [
+                "{{ORDER_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order By ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "userId",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{ORDER_BASE_URL}}/{{orderId}}",
+              "host": [
+                "{{ORDER_BASE_URL}}"
+              ],
+              "path": [
+                "{{orderId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Orders By User ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "userId",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{ORDER_BASE_URL}}",
+              "host": [
+                "{{ORDER_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Order Service endpoints accessed through API Gateway"
+    },
+    {
+      "name": "Inventory Service (via API Gateway)",
+      "item": [
+        {
+          "name": "Get Inventory",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{INVENTORY_BASE_URL}}",
+              "host": [
+                "{{INVENTORY_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Inventory By Product ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{INVENTORY_BASE_URL}}/product/{{productId}}",
+              "host": [
+                "{{INVENTORY_BASE_URL}}"
+              ],
+              "path": [
+                "product",
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "tenantId",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"quantity\": 50,\n    \"stockStatus\": \"IN_STOCK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{INVENTORY_BASE_URL}}",
+              "host": [
+                "{{INVENTORY_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Inventory Service endpoints accessed through API Gateway"
+    },
+    {
+      "name": "Payment Service (via API Gateway)",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"orderId\": \"{{orderId}}\",\n    \"userId\": \"{{userId}}\",\n    \"amount\": 1050.00,\n    \"paymentMethod\": \"CARD\",\n    \"status\": \"PENDING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{PAYMENT_BASE_URL}}",
+              "host": [
+                "{{PAYMENT_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment By Order ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{PAYMENT_BASE_URL}}/order/{{orderId}}",
+              "host": [
+                "{{PAYMENT_BASE_URL}}"
+              ],
+              "path": [
+                "order",
+                "{{orderId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment By User ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{PAYMENT_BASE_URL}}/user/{{userId}}",
+              "host": [
+                "{{PAYMENT_BASE_URL}}"
+              ],
+              "path": [
+                "user",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Payment Service endpoints accessed through API Gateway"
+    },
+    {
+      "name": "Notification Service (via API Gateway)",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "userId",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{NOTIFICATION_BASE_URL}}",
+              "host": [
+                "{{NOTIFICATION_BASE_URL}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notification By ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "userId",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{NOTIFICATION_BASE_URL}}/{{notificationId}}",
+              "host": [
+                "{{NOTIFICATION_BASE_URL}}"
+              ],
+              "path": [
+                "{{notificationId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Notification Service endpoints accessed through API Gateway"
+    },
+    {
+      "name": "API Gateway Health Check",
+      "item": [
+        {
+          "name": "Gateway Health",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{GATEWAY_BASE_URL}}/actuator/health",
+              "host": [
+                "{{GATEWAY_BASE_URL}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "API Gateway health and status endpoints"
+    }
+  ]
+}
