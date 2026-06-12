@@ -83,7 +83,8 @@ public class AuthServiceImpl implements AuthService {
 
         saveRefreshToken(savedUser.getId(), refreshToken);
 
-        return new AuthResponse(accessToken, refreshToken);
+        return new AuthResponse(accessToken, refreshToken, user.getId().toString(), user.getTenantId().toString(),
+                user.getRole().toString());
     }
 
     @Override
@@ -101,7 +102,8 @@ public class AuthServiceImpl implements AuthService {
 
         saveRefreshToken(user.getId(), refreshToken);
 
-        return new AuthResponse(accessToken, refreshToken);
+        return new AuthResponse(accessToken, refreshToken, user.getId().toString(), user.getTenantId().toString(),
+                user.getRole().toString());
     }
 
     @Override
@@ -125,7 +127,8 @@ public class AuthServiceImpl implements AuthService {
 
         saveRefreshToken(user.getId(), newRefreshToken);
 
-        return new AuthResponse(newAccessToken, newRefreshToken);
+        return new AuthResponse(newAccessToken, newRefreshToken, user.getId().toString(), user.getTenantId().toString(),
+                user.getRole().toString());
     }
 
     @Override

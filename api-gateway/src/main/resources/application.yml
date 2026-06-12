@@ -15,6 +15,7 @@ spring:
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
         - RequestRateLimiter
+
       redis-rate-limiter:
         replenish-rate: 20
         burst-capacity: 40
@@ -62,3 +63,18 @@ jwt:
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: TRACE
+    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - gateway
+
+  endpoint:
+    gateway:
+      enabled: true
