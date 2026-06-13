@@ -62,10 +62,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     @CacheEvict(value = { "orderById", "ordersByUser" }, allEntries = true)
-    public OrderResponseDTO placeOrder(
-            OrderRequestDTO dto,
-            UUID userId,
-            String idempotencyKey) {
+    public OrderResponseDTO placeOrder(OrderRequestDTO dto, UUID userId, String idempotencyKey) {
 
         logger.info("Starting order placement for user: {}, idempotencyKey: {}", userId, maskIdempotencyKey(idempotencyKey));
 
@@ -88,12 +85,21 @@ public class OrderServiceImpl implements OrderService {
         // 2. VALIDATE REQUEST
         // ---------------------------------------------------
 
-        if (dto.getItems() == null
-                || dto.getItems().isEmpty()) {
-
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
             logger.warn("Invalid order request for user: {} - no items provided", userId);
-            throw new InvalidOrderRequestException(
-                    "Order must contain at least one item");
+            throw new InvalidOrderRequestException("Order must contain at least one item");
+        }
+
+        // Validate each item: quantity and price
+        for (OrderItemRequestDTO item : dto.getItems()) {
+            if (item.getQuantity() <= 0) {
+                logger.warn("Invalid quantity for product {}: {}", item.getProductId(), item.getQuantity());
+                throw new InvalidOrderRequestException("Quantity must be greater than 0 for product: " + item.getProductId());
+            }
+            if (item.getPrice() < 0) {
+                logger.warn("Invalid price for product {}: {}", item.getProductId(), item.getPrice());
+                throw new InvalidOrderRequestException("Price cannot be negative for product: " + item.getProductId());
+            }
         }
 
         logger.debug("Order validation passed for user: {}, items count: {}", userId, dto.getItems().size());
@@ -103,7 +109,6 @@ public class OrderServiceImpl implements OrderService {
         // ---------------------------------------------------
 
         Order order = new Order();
-
         order.setUserId(userId);
         order.setStatus(OrderStatus.CREATED);
         order.setPaymentStatus(PaymentStatus.PENDING);
@@ -113,48 +118,50 @@ public class OrderServiceImpl implements OrderService {
         logger.info("Order created with ID: {} for user: {}", savedOrder.getId(), userId);
 
         // ---------------------------------------------------
-        // 4. RESERVE INVENTORY (SYNC REST)
+        // 4. RESERVE INVENTORY (SYNC REST WITH ROLLBACK)
         // ---------------------------------------------------
 
         logger.info("Starting inventory reservation for order: {}", savedOrder.getId());
         double totalAmount = 0;
-
         List<InventoryRequestDTO> reservedItems = new ArrayList<>();
 
         try {
-
             for (OrderItemRequestDTO item : dto.getItems()) {
-
                 InventoryRequestDTO invReq = new InventoryRequestDTO();
-
                 invReq.setProductId(item.getProductId());
                 invReq.setQuantity(item.getQuantity());
 
                 logger.debug("Reserving inventory for product: {}, quantity: {}", item.getProductId(), item.getQuantity());
 
-                // synchronous validation with retry
-                Retry.decorateRunnable(inventoryServiceRetry, () ->
-                    restTemplate.postForObject(
-                            "http://inventory-service:8084/api/v1/inventory/reserve",
-                            invReq,
-                            Void.class)
-                ).run();
+                try {
+                    // Synchronous validation with retry
+                    Retry.decorateRunnable(inventoryServiceRetry, () ->
+                        restTemplate.postForObject(
+                                "http://inventory-service:8084/api/v1/inventory/reserve",
+                                invReq,
+                                Void.class)
+                    ).run();
 
-                reservedItems.add(invReq);
+                    reservedItems.add(invReq);
+                    totalAmount += item.getPrice() * item.getQuantity();
+                    logger.debug("Successfully reserved inventory for product: {}", item.getProductId());
 
-                totalAmount += item.getPrice() * item.getQuantity();
+                } catch (Exception itemEx) {
+                    logger.error("Failed to reserve inventory for product: {}, rolling back all reservations for order: {}",
+                            item.getProductId(), savedOrder.getId(), itemEx);
+                    // Rollback all previously reserved items
+                    releaseReservedInventory(reservedItems, savedOrder.getId());
+                    throw itemEx;
+                }
             }
 
             logger.info("Inventory reservation completed for order: {}, total amount: {}", savedOrder.getId(), totalAmount);
 
         } catch (Exception ex) {
-
             logger.error("Inventory reservation failed for order: {}, error: {}", savedOrder.getId(), ex.getMessage(), ex);
             savedOrder.setStatus(OrderStatus.FAILED);
             orderRepository.save(savedOrder);
-
-            throw new RuntimeException(
-                    "Inventory reservation failed");
+            throw new RuntimeException("Inventory reservation failed: " + ex.getMessage(), ex);
         }
 
         // ---------------------------------------------------
@@ -163,35 +170,41 @@ public class OrderServiceImpl implements OrderService {
 
         savedOrder.setStatus(OrderStatus.RESERVED);
         savedOrder.setTotalAmount(totalAmount);
-
         orderRepository.save(savedOrder);
         logger.info("Order status updated to RESERVED for order: {}", savedOrder.getId());
 
         // ---------------------------------------------------
-        // 6. SAVE ORDER ITEMS
+        // 6. SAVE ORDER ITEMS (BEFORE KAFKA)
         // ---------------------------------------------------
 
         logger.debug("Saving order items for order: {}", savedOrder.getId());
         List<OrderItemResponseDTO> responseItems = new ArrayList<>();
 
-        for (OrderItemRequestDTO item : dto.getItems()) {
+        try {
+            for (OrderItemRequestDTO item : dto.getItems()) {
+                OrderItem orderItem = new OrderItem();
+                orderItem.setOrderId(savedOrder.getId());
+                orderItem.setProductId(item.getProductId());
+                orderItem.setQuantity(item.getQuantity());
+                orderItem.setPrice(item.getPrice());
 
-            OrderItem orderItem = new OrderItem();
+                orderItemRepository.save(orderItem);
 
-            orderItem.setOrderId(savedOrder.getId());
-            orderItem.setProductId(item.getProductId());
-            orderItem.setQuantity(item.getQuantity());
-            orderItem.setPrice(item.getPrice());
+                OrderItemResponseDTO responseItem = new OrderItemResponseDTO();
+                responseItem.setProductId(item.getProductId());
+                responseItem.setQuantity(item.getQuantity());
+                responseItem.setPrice(item.getPrice());
 
-            orderItemRepository.save(orderItem);
+                responseItems.add(responseItem);
+            }
+            logger.info("Order items saved successfully for order: {}", savedOrder.getId());
 
-            OrderItemResponseDTO responseItem = new OrderItemResponseDTO();
-
-            responseItem.setProductId(item.getProductId());
-            responseItem.setQuantity(item.getQuantity());
-            responseItem.setPrice(item.getPrice());
-
-            responseItems.add(responseItem);
+        } catch (Exception itemEx) {
+            logger.error("Failed to save order items for order: {}, rolling back inventory", savedOrder.getId(), itemEx);
+            releaseReservedInventory(reservedItems, savedOrder.getId());
+            savedOrder.setStatus(OrderStatus.FAILED);
+            orderRepository.save(savedOrder);
+            throw new RuntimeException("Failed to save order items: " + itemEx.getMessage(), itemEx);
         }
 
         // ---------------------------------------------------
@@ -203,10 +216,18 @@ public class OrderServiceImpl implements OrderService {
                 savedOrder.getUserId(),
                 totalAmount);
 
-        kafkaTemplate.send(
-                "order-created-topic",
-                savedOrder.getId().toString(),
-                event);
+        try {
+            kafkaTemplate.send(
+                    "order-created-topic",
+                    savedOrder.getId().toString(),
+                    event).get(); // Wait for send to complete and catch async errors
+            logger.info("Order created event published to Kafka for order: {}", savedOrder.getId());
+
+        } catch (Exception kafkaEx) {
+            logger.error("Failed to publish order created event to Kafka for order: {}", savedOrder.getId(), kafkaEx);
+            // Log the error but don't rollback - order is already created and inventory reserved
+            // Consider adding a dead letter queue or retry mechanism for critical events
+        }
 
         // ---------------------------------------------------
         // 8. BUILD RESPONSE
@@ -229,9 +250,39 @@ public class OrderServiceImpl implements OrderService {
         redisTemplate.opsForValue().set(
                 redisKey,
                 response,
-                Duration.ofMinutes(30));
+                Duration.ofMinutes(5));
 
+        logger.info("Order successfully placed and cached with ID: {} for user: {}", savedOrder.getId(), userId);
         return response;
+    }
+
+    /**
+     * Releases reserved inventory items if order processing fails
+     * @param reservedItems List of items that were successfully reserved
+     * @param orderId The order ID for logging purposes
+     */
+    private void releaseReservedInventory(List<InventoryRequestDTO> reservedItems, UUID orderId) {
+        for (InventoryRequestDTO item : reservedItems) {
+            try {
+                logger.debug("Releasing reserved inventory for product: {}, quantity: {}, order: {}",
+                        item.getProductId(), item.getQuantity(), orderId);
+
+                Retry.decorateRunnable(inventoryServiceRetry, () ->
+                    restTemplate.postForObject(
+                            "http://inventory-service:8084/api/v1/inventory/release",
+                            item,
+                            Void.class)
+                ).run();
+
+                logger.debug("Successfully released inventory for product: {} of order: {}",
+                        item.getProductId(), orderId);
+
+            } catch (Exception ex) {
+                logger.error("Failed to release inventory for product: {} of order: {}. Manual intervention required!",
+                        item.getProductId(), orderId, ex);
+                // Continue releasing other items even if one fails
+            }
+        }
     }
 
     @Override

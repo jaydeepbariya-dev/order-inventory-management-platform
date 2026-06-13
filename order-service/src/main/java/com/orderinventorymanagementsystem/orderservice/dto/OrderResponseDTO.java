@@ -3,6 +3,7 @@ package com.orderinventorymanagementsystem.orderservice.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,13 +25,13 @@ public class OrderResponseDTO implements Serializable{
     private String paymentStatus;
 
     @Schema(description = "Order creation timestamp", example = "2026-05-08T14:35:00Z")
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
     @Schema(description = "Ordered items")
     private List<OrderItemResponseDTO> items;
 
     public OrderResponseDTO(UUID id, UUID userId, Double totalAmount, String status, String paymentStatus,
-            Instant createdAt) {
+            LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.totalAmount = totalAmount;
@@ -83,11 +84,11 @@ public class OrderResponseDTO implements Serializable{
         this.paymentStatus = paymentStatus;
     }
 
-    public Instant getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Instant createdAt) {
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 

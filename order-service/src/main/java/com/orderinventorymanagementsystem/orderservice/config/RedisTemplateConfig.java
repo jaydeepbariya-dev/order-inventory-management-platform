@@ -3,13 +3,13 @@ package com.orderinventorymanagementsystem.orderservice.config;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -22,6 +22,9 @@ public class RedisTemplateConfig {
 
         ObjectMapper mapper = new ObjectMapper();
 
+        // FIX: support Instant, LocalDateTime, LocalDate etc.
+        mapper.registerModule(new JavaTimeModule());
+
         mapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
@@ -33,10 +36,14 @@ public class RedisTemplateConfig {
 
         template.setConnectionFactory(connectionFactory);
 
-        template.setKeySerializer(new StringRedisSerializer());
+        template.setKeySerializer(
+                new StringRedisSerializer());
+
         template.setValueSerializer(serializer);
 
-        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(
+                new StringRedisSerializer());
+
         template.setHashValueSerializer(serializer);
 
         template.afterPropertiesSet();
