@@ -58,7 +58,7 @@ spring:
             - Path=/api/v1/notifications/**
 
 jwt:
-  secret: bXkgbmFtZSBpcyBqYXlkZWVwIGJhcml5YSBhbmQgaSB3aWxsIGJlIHN1Y2Nlc3Nlc3NmdWwgaW4gdGhpcyB5ZWFy
+  secret: bXkgbmFtZSBpcyBqYXlkZWVwIGJhcml5YSBhbmQgaSB3aWxsIGJlIHN1Y2Nlc3NmdWwgaW4gdGhpcyB5ZWFy
 
 logging:
   level:
